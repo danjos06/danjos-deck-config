@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { DanjosDeckConfig, ButtonAction, ActionType, ConsumerAction, KeyModifiers, SequenceStep, SpotifyActionType } from '../lib/types';
+import { DanjosDeckConfig, ButtonAction, ActionType, ConsumerAction, KeyModifiers, SequenceStep } from '../lib/types';
 import { X, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { translations, Language } from '../lib/i18n';
 
@@ -107,8 +107,6 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
       newAction.cpp = { code: 'Keyboard.print("Hello World!");' };
     } else if (type === 'sequence') {
       newAction.sequence = [];
-    } else if (type === 'spotify') {
-      newAction.spotify = { action: 'PLAY_PAUSE' };
     }
     setAction(newAction);
   };
@@ -132,7 +130,7 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-300">{t.actionType}</label>
             <div className="grid grid-cols-2 gap-2">
-              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence', 'spotify'].map((type) => (
+              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence'].map((type) => (
                 <button
                   key={type}
                   onClick={() => updateActionType(type as ActionType)}
@@ -310,23 +308,6 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
             >
               {consumerActions.map(ca => <option key={ca.value} value={ca.value}>{ca.icon} {ca.label}</option>)}
             </select>
-          )}
-
-          {action.type === 'spotify' && action.spotify && (
-            <div className="space-y-4">
-              <label className="text-xs text-gray-500">{t.spotifyAction || 'Spotify Action'}</label>
-              <select
-                value={action.spotify.action}
-                onChange={(e) => setAction({ ...action, spotify: { action: e.target.value as SpotifyActionType } })}
-                className="w-full bg-[#252525] border border-[#3d3d3d] text-xs text-white p-2 rounded"
-              >
-                <option value="PLAY_PAUSE">⏯ {t.playPause || 'Play / Pause'}</option>
-                <option value="NEXT_TRACK">⏭ {t.nextTrack || 'Next Track'}</option>
-                <option value="PREV_TRACK">⏮ {t.prevTrack || 'Previous Track'}</option>
-                <option value="VOLUME_UP">🔊 {t.volUp || 'Volume Up'}</option>
-                <option value="VOLUME_DOWN">🔉 {t.volDown || 'Volume Down'}</option>
-              </select>
-            </div>
           )}
 
         </div>

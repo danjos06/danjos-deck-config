@@ -10,10 +10,8 @@ import SerialMonitor from './SerialMonitor';
 import ActionModal from './ActionModal';
 import PinsSettings from './PinsSettings';
 import InstructionsTab from './InstructionsTab';
-import { Settings2, Bell, Settings, User, ChevronLeft, ChevronRight, Trash2, Edit2, Plus, Layout, Cpu, BookOpen, Send, Wifi, Usb, RefreshCw, Music, Play, Pause, SkipForward } from 'lucide-react';
+import { Settings2, Bell, Settings, User, ChevronLeft, ChevronRight, Trash2, Edit2, Plus, Layout, Cpu, BookOpen, Send, Wifi, Usb, RefreshCw } from 'lucide-react';
 import { useSerial } from '../hooks/useSerial';
-import SpotifyPanel from './SpotifyPanel';
-import { SpotifyTrack, togglePlayPause, skipToNext, skipToPrevious, setPlaybackVolume, getPlaybackState } from '../lib/spotify';
 import { syncConfigToDevice, syncConfigViaWiFi } from '../lib/syncProtocol';
 import Image from 'next/image';
 import { translations, Language } from '../lib/i18n';
@@ -46,8 +44,7 @@ export default function StreamDeckConfigurator() {
   const [selectedPageIdx, setSelectedPageIdx] = useState(0);
   const [selectedButtonIdx, setSelectedButtonIdx] = useState<number | undefined>(undefined);
   const [lang, setLang] = useState<Language>('en');
-  const [activeTab, setActiveTab] = useState<'config' | 'sync' | 'pins' | 'docs' | 'spotify'>('config');
-  const [spotifyTrack, setSpotifyTrack] = useState<SpotifyTrack | null>(null);
+  const [activeTab, setActiveTab] = useState<'config' | 'sync' | 'pins' | 'docs'>('config');
   
   // Modal state
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -120,67 +117,6 @@ export default function StreamDeckConfigurator() {
     }, 0);
     return () => clearTimeout(timer);
   }, []);
-
-  const handlePhysicalKeyPress = async (btnIdx: number, pageIdx: number) => {
-    if (!config) return;
-    
-    // Find the button/encoder action
-    let action;
-    if (btnIdx >= 0 && btnIdx < 6) {
-      action = config.pages[pageIdx]?.buttons[btnIdx]?.action;
-    } else {
-      if (btnIdx === 6) action = config.encoder1.cwAction;
-      else if (btnIdx === 7) action = config.encoder1.ccwAction;
-      else if (btnIdx === 8) action = config.encoder1.btnAction;
-      else if (btnIdx === 9) action = config.encoder2.cwAction;
-      else if (btnIdx === 10) action = config.encoder2.ccwAction;
-      else if (btnIdx === 11) action = config.encoder2.btnAction;
-    }
-
-    if (!action) return;
-
-    if (action.type === 'spotify' && action.spotify) {
-      const spotifyAction = action.spotify.action;
-      showToast(`Spotify: ${spotifyAction}`);
-      try {
-        if (spotifyAction === 'PLAY_PAUSE') {
-          const isPlaying = spotifyTrack ? spotifyTrack.isPlaying : false;
-          await togglePlayPause(isPlaying);
-        } else if (spotifyAction === 'NEXT_TRACK') {
-          await skipToNext();
-        } else if (spotifyAction === 'PREV_TRACK') {
-          await skipToPrevious();
-        } else if (spotifyAction === 'VOLUME_UP') {
-          const currentVol = spotifyTrack ? spotifyTrack.volumePercent : 50;
-          await setPlaybackVolume(Math.min(100, currentVol + 10));
-        } else if (spotifyAction === 'VOLUME_DOWN') {
-          const currentVol = spotifyTrack ? spotifyTrack.volumePercent : 50;
-          await setPlaybackVolume(Math.max(0, currentVol - 10));
-        }
-      } catch (err: any) {
-        console.error('Failed to execute Spotify action from physical keypress:', err);
-        showToast('Spotify control failed');
-      }
-    }
-  };
-
-  // Persistent listener for physical keys over Serial
-  useEffect(() => {
-    if (isConnected && activeTab !== 'sync') {
-      setOnLineReceived((line) => {
-        if (line.startsWith('KEY_PRESS ')) {
-          const parts = line.split(' ');
-          if (parts.length >= 3) {
-            const btnIdx = parseInt(parts[1]);
-            const pageIdx = parseInt(parts[2]);
-            handlePhysicalKeyPress(btnIdx, pageIdx);
-          }
-        }
-      });
-    } else if (!isConnected) {
-      setOnLineReceived(null);
-    }
-  }, [isConnected, activeTab, config, spotifyTrack]);
 
   const t = translations[lang];
 
@@ -333,9 +269,6 @@ export default function StreamDeckConfigurator() {
             <button onClick={() => setActiveTab('docs')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'docs' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
               <BookOpen size={14} /><span>{t.instructions}</span>
             </button>
-            <button onClick={() => setActiveTab('spotify')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'spotify' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
-              <Music size={14} /><span>Spotify</span>
-            </button>
           </div>
           
           {/* Quick Sync Button */}
@@ -456,60 +389,7 @@ export default function StreamDeckConfigurator() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between h-full max-w-4xl mx-auto w-full">
-                    <div className="text-gray-500 font-mono italic text-sm flex items-center space-x-2">
-                      <span>{t.selectKey}</span>
-                    </div>
-
-                    {spotifyTrack ? (
-                      <div className="flex items-center bg-[#252525]/40 border border-[#3d3d3d]/50 rounded-2xl p-3 px-5 space-x-4 animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-md">
-                        <div className="w-12 h-12 relative rounded-lg overflow-hidden flex-shrink-0 bg-black/40">
-                          <img src={spotifyTrack.albumCoverUrl} alt={spotifyTrack.albumName} className="object-cover w-full h-full" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#1db954] animate-pulse"></span>
-                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{lang === 'pt' ? 'No Spotify' : 'On Spotify'}</span>
-                          </div>
-                          <h4 className="text-xs font-bold text-white truncate max-w-[180px]">{spotifyTrack.name}</h4>
-                          <p className="text-[10px] text-gray-400 truncate max-w-[180px]">{spotifyTrack.artists.join(', ')}</p>
-                        </div>
-                        <div className="flex items-center space-x-2 border-l border-[#2d2d2d] pl-4">
-                          <button 
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              await togglePlayPause(spotifyTrack.isPlaying);
-                              setTimeout(async () => {
-                                const state = await getPlaybackState();
-                                setSpotifyTrack(state);
-                              }, 400);
-                            }}
-                            className="w-8 h-8 rounded-full bg-[#1db954] hover:bg-[#1ed760] text-black flex items-center justify-center shadow transition-all hover:scale-105 active:scale-95"
-                          >
-                            {spotifyTrack.isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                          </button>
-                          <button 
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              await skipToNext();
-                              setTimeout(async () => {
-                                const state = await getPlaybackState();
-                                setSpotifyTrack(state);
-                              }, 600);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-white transition-colors"
-                          >
-                            <SkipForward size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="hidden md:flex items-center space-x-2 bg-[#252525]/30 border border-[#3d3d3d]/30 rounded-xl p-2 px-3 text-[11px] text-gray-500">
-                        <Music size={12} className="text-[#1db954]" />
-                        <span>{lang === 'pt' ? 'Abra a aba Spotify para sincronizar música' : 'Open Spotify tab to sync track details'}</span>
-                      </div>
-                    )}
-                  </div>
+                  <div className="flex items-center justify-center h-full text-gray-600 font-mono italic text-sm">{t.selectKey}</div>
                 )}
               </div>
             </div>
@@ -520,10 +400,6 @@ export default function StreamDeckConfigurator() {
           ) : activeTab === 'docs' ? (
             <div className="flex-1 flex flex-col bg-[#111] overflow-hidden">
               <InstructionsTab t={t} lang={lang} />
-            </div>
-          ) : activeTab === 'spotify' ? (
-            <div className="flex-1 overflow-y-auto px-6 py-8 bg-[#1e1e1e]">
-              <SpotifyPanel lang={lang} onToast={showToast} onTrackUpdate={setSpotifyTrack} />
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto px-6 py-8">
