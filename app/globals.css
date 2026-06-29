@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+:root {
+  --neo-bg: #2b2d31;
+  --neo-light: #36393e;
+  --neo-dark: #202224;
+}
+
+body, html, #__next {
+  background-color: var(--neo-bg) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Unified background by stripping old hardcoded colors */
+.bg-\[\#1e1e1e\], .bg-\[\#111\], .bg-\[\#1a1a1a\], .bg-\[\#252525\], .bg-\[\#2d2d2d\], .bg-\[\#333\], .bg-\[\#0a0a0a\], .bg-\[\#161616\], .bg-black\/40, .bg-black\/60, .bg-black {
+  background-color: transparent !important;
+}
+
+/* Strip gradients */
+.bg-gradient-to-br, .from-\[\#3d3d3d\], .to-\[\#111\] {
+  background-image: none !important;
+  background-color: var(--neo-bg) !important;
+}
+
+.border-\[\#3d3d3d\], .border-\[\#2d2d2d\], .border-\[\#4d4d4d\], .border-\[\#222\], .border-blue-500\/20, .border-blue-500\/10 {
+  border-color: transparent !important;
+  border-width: 0 !important;
+}
+
+/* Neumorphic buttons globally */
+button {
+  background-color: var(--neo-bg) !important;
+  box-shadow: 4px 4px 8px var(--neo-dark), -4px -4px 8px var(--neo-light) !important;
+  transition: all 0.2s ease !important;
+}
+
+button:active {
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+}
+
+/* Specific buttons with brand colors can keep their text color but bg is neumorphic */
+.bg-blue-600 {
+  background-color: var(--neo-bg) !important;
+  color: #60a5fa !important;
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+}
+
+.bg-green-600 {
+  background-color: var(--neo-bg) !important;
+  color: #4ade80 !important;
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+}
+
+.bg-orange-600 {
+  background-color: var(--neo-bg) !important;
+  color: #fb923c !important;
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+}
+
+button:disabled {
+  background-color: var(--neo-bg) !important;
+  color: #6b7280 !important;
+  box-shadow: none !important;
+}
+
+/* Forms & Inputs */
+input, select, textarea {
+  background-color: var(--neo-bg) !important;
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+  border: none !important;
+  color: #e2e8f0 !important;
+}
+
+/* Modals & Popups */
+.shadow-2xl, .shadow-xl {
+  box-shadow: 8px 8px 16px var(--neo-dark), -8px -8px 16px var(--neo-light) !important;
+}
+
+.shadow-lg, .shadow-md {
+  box-shadow: 4px 4px 8px var(--neo-dark), -4px -4px 8px var(--neo-light) !important;
+}
+
+.shadow-inner {
+  box-shadow: inset 4px 4px 8px var(--neo-dark), inset -4px -4px 8px var(--neo-light) !important;
+}
+
+/* Strip border lines */
+.border-t, .border-b, .border-l, .border-r {
+  border-color: transparent !important;
+}
