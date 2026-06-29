@@ -1,4 +1,4 @@
-export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'none';
+export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'spotify' | 'none';
 
 export type ConsumerAction =
   | 'VOLUME_INCREMENT'
@@ -10,6 +10,12 @@ export type ConsumerAction =
   | 'STOP'
   | 'BRIGHTNESS_INCREMENT'
   | 'BRIGHTNESS_DECREMENT';
+
+export type SpotifyActionType = 'PLAY_PAUSE' | 'NEXT_TRACK' | 'PREV_TRACK' | 'VOLUME_UP' | 'VOLUME_DOWN';
+
+export interface SpotifyAction {
+  action: SpotifyActionType;
+}
 
 export interface KeyModifiers {
   leftGui: boolean;
@@ -55,6 +61,7 @@ export interface ButtonAction {
   mouse?: MouseAction;
   cpp?: CppAction;
   sequence?: SequenceStep[];
+  spotify?: SpotifyAction;
 }
 
 export interface ButtonState {

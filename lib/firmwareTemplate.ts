@@ -240,6 +240,7 @@ void runStep(uint8_t t, uint8_t m, uint16_t k, int16_t v1, int16_t v2) {
 }
 
 void executeAction(int b, int p) {
+  Serial.printf("KEY_PRESS %d %d\n", b, p);
   // Hardcoded C++ Actions
   ${generateEmbeddedActions()}
 
