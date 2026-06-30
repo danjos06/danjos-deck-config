@@ -61,6 +61,15 @@ export interface ButtonState {
   label: string;
   bitmap: number[]; // 1024 bytes, empty array = use default border bitmap
   action: ButtonAction;
+  iconName?: string;
+  iconLayout?: 'icon-only' | 'icon-text-side' | 'icon-text-below';
+  iconSize?: number;
+  iconXOffset?: number;
+  iconYOffset?: number;
+  textSize?: number;
+  textXOffset?: number;
+  textYOffset?: number;
+  showBorder?: boolean;
 }
 
 export interface EncoderConfig {

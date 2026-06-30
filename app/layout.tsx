@@ -19,6 +19,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+      </head>
       <body className={`${inter.className} bg-[#1e1e1e] text-white antialiased`}>
         {children}
       </body>
