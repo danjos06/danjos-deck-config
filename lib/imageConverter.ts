@@ -127,10 +127,10 @@ export async function generateIconBitmap({
   // Ensure font is loaded
   try {
     if (typeof document !== 'undefined' && document.fonts) {
-      await document.fonts.load(`${iconSize}px "Material Icons"`);
+      await document.fonts.load(`${iconSize}px "Material Symbols Rounded"`);
     }
   } catch (e) {
-    console.warn("Material Icons font load error:", e);
+    console.warn("Material Symbols Rounded font load error:", e);
   }
 
   const canvas = new OffscreenCanvas(128, 64);
@@ -195,7 +195,7 @@ export async function generateIconBitmap({
 
   // Draw Icon
   if (iconName) {
-    ctx.font = `${iconSize}px "Material Icons"`;
+    ctx.font = `${iconSize}px "Material Symbols Rounded"`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     ctx.fillText(iconName, iconX, iconY);

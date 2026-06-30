@@ -495,7 +495,7 @@ export default function StreamDeckConfigurator() {
                                   className={`h-11 rounded flex flex-col items-center justify-center border transition-all px-1 ${config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.iconName === iconSearchQuery.toLowerCase() ? 'bg-blue-600 border-blue-500 text-white' : 'bg-blue-900/20 border-blue-600/30 text-blue-400 hover:text-blue-300'}`}
                                   title={`Use '${iconSearchQuery}'`}
                                 >
-                                  <span className="material-icons text-lg leading-none">{iconSearchQuery.toLowerCase()}</span>
+                                  <span className="material-symbols-rounded text-lg leading-none">{iconSearchQuery.toLowerCase()}</span>
                                   <span className="text-[8px] truncate max-w-full">Use Custom</span>
                                 </button>
                               )}
@@ -507,7 +507,7 @@ export default function StreamDeckConfigurator() {
                                   className={`h-11 rounded flex flex-col items-center justify-center border transition-all hover:scale-105 active:scale-95 ${config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.iconName === ico ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-[#1e1e1e] border-[#2d2d2d] text-gray-300 hover:text-white'}`}
                                   title={ico}
                                 >
-                                  <span className="material-icons text-xl leading-none">{ico}</span>
+                                  <span className="material-symbols-rounded text-xl leading-none">{ico}</span>
                                   <span className="text-[8px] opacity-50 truncate max-w-[40px] mt-0.5">{ico}</span>
                                 </button>
                               ))}
@@ -678,7 +678,7 @@ export default function StreamDeckConfigurator() {
                               {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.iconName ? (
                                 <>
                                   <div className="w-8 h-8 rounded bg-[#1e1e1e] border border-[#2d2d2d] flex items-center justify-center text-white">
-                                    <span className="material-icons text-xl">{config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.iconName}</span>
+                                    <span className="material-symbols-rounded text-xl">{config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.iconName}</span>
                                   </div>
                                   <div className="overflow-hidden">
                                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Active Icon</p>
