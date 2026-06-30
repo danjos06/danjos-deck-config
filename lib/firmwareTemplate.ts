@@ -54,23 +54,23 @@ export const generateFirmware = (config: DanjosDeckConfig, ssid: string = '', pa
 
 // --- PINS (Hardcoded Defaults) ---
 int PIN_BTN[6] = {
-  \${pins?.btn1Enabled !== false ? (pins?.btn1 ?? 1) : -1}, 
-  \${pins?.btn2Enabled !== false ? (pins?.btn2 ?? 2) : -1}, 
-  \${pins?.btn3Enabled !== false ? (pins?.btn3 ?? 3) : -1}, 
-  \${pins?.btn4Enabled !== false ? (pins?.btn4 ?? 4) : -1}, 
-  \${pins?.btn5Enabled !== false ? (pins?.btn5 ?? 5) : -1}, 
-  \${pins?.btn6Enabled !== false ? (pins?.btn6 ?? 6) : -1}
+  ${pins?.btn1Enabled !== false ? (pins?.btn1 ?? 1) : -1}, 
+  ${pins?.btn2Enabled !== false ? (pins?.btn2 ?? 2) : -1}, 
+  ${pins?.btn3Enabled !== false ? (pins?.btn3 ?? 3) : -1}, 
+  ${pins?.btn4Enabled !== false ? (pins?.btn4 ?? 4) : -1}, 
+  ${pins?.btn5Enabled !== false ? (pins?.btn5 ?? 5) : -1}, 
+  ${pins?.btn6Enabled !== false ? (pins?.btn6 ?? 6) : -1}
 };
-int PIN_PREV = \${pins?.btnPrevEnabled !== false ? (pins?.btnPrev ?? 7) : -1};
-int PIN_NEXT = \${pins?.btnNextEnabled !== false ? (pins?.btnNext ?? 15) : -1};
-int PIN_ENC1_CLK = \${pins?.enc1Enabled !== false ? (pins?.enc1Clk ?? 16) : -1};
-int PIN_ENC1_DT = \${pins?.enc1Enabled !== false ? (pins?.enc1Dt ?? 17) : -1};
-int PIN_ENC1_BTN = \${pins?.enc1Enabled !== false ? (pins?.enc1Btn ?? 18) : -1};
-int PIN_ENC2_CLK = \${pins?.enc2Enabled !== false ? (pins?.enc2Clk ?? 20) : -1};
-int PIN_ENC2_DT = \${pins?.enc2Enabled !== false ? (pins?.enc2Dt ?? 21) : -1};
-int PIN_ENC2_BTN = \${pins?.enc2Enabled !== false ? (pins?.enc2Btn ?? 41) : -1};
-int PIN_SDA = \${pins ? pins.sda : 8};
-int PIN_SCL = \${pins ? pins.scl : 9};
+int PIN_PREV = ${pins?.btnPrevEnabled !== false ? (pins?.btnPrev ?? 7) : -1};
+int PIN_NEXT = ${pins?.btnNextEnabled !== false ? (pins?.btnNext ?? 15) : -1};
+int PIN_ENC1_CLK = ${pins?.enc1Enabled !== false ? (pins?.enc1Clk ?? 16) : -1};
+int PIN_ENC1_DT = ${pins?.enc1Enabled !== false ? (pins?.enc1Dt ?? 17) : -1};
+int PIN_ENC1_BTN = ${pins?.enc1Enabled !== false ? (pins?.enc1Btn ?? 18) : -1};
+int PIN_ENC2_CLK = ${pins?.enc2Enabled !== false ? (pins?.enc2Clk ?? 20) : -1};
+int PIN_ENC2_DT = ${pins?.enc2Enabled !== false ? (pins?.enc2Dt ?? 21) : -1};
+int PIN_ENC2_BTN = ${pins?.enc2Enabled !== false ? (pins?.enc2Btn ?? 41) : -1};
+int PIN_SDA = ${pins ? pins.sda : 8};
+int PIN_SCL = ${pins ? pins.scl : 9};
 
 // --- DISPLAY SETTINGS ---
 #define SCREEN_WIDTH 128
@@ -89,8 +89,8 @@ int currentPage = 0;
 int totalPages = 1;
 bool isSyncing = false;
 
-const char* wifi_ssid = "\${ssid}";
-const char* wifi_password = "\${password}";
+const char* wifi_ssid = "${ssid}";
+const char* wifi_password = "${password}";
 String pc_ip = "${config.pcIp || ''}";
 bool screensOn = true;
 unsigned long lastPingTime = 0;
@@ -117,12 +117,10 @@ bool pingIP(const String& ip_str) {
   ping_config.target_addr = target_addr;
   ping_config.count = 1;
   
-  esp_ping_callbacks_t cbs = {
-    .on_ping_success = my_ping_success,
-    .on_ping_timeout = my_ping_timeout,
-    .on_ping_end = NULL,
-    .cb_args = NULL
-  };
+  esp_ping_callbacks_t cbs;
+  memset(&cbs, 0, sizeof(cbs));
+  cbs.on_ping_success = my_ping_success;
+  cbs.on_ping_timeout = my_ping_timeout;
   
   last_ping_result = false;
   esp_ping_handle_t ping_handle;
