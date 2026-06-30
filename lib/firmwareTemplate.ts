@@ -95,14 +95,21 @@ String pc_ip = "${config.pcIp || ''}";
 bool screensOn = true;
 unsigned long lastPingTime = 0;
 const unsigned long PING_INTERVAL = 60000; // 1 minute
+volatile bool ping_done = false;
 bool last_ping_result = false;
 
 static void my_ping_success(esp_ping_handle_t hdl, void *args) {
   last_ping_result = true;
+  ping_done = true;
 }
 
 static void my_ping_timeout(esp_ping_handle_t hdl, void *args) {
   last_ping_result = false;
+  ping_done = true;
+}
+
+static void my_ping_end(esp_ping_handle_t hdl, void *args) {
+  ping_done = true;
 }
 
 bool pingIP(const String& ip_str) {
@@ -121,12 +128,17 @@ bool pingIP(const String& ip_str) {
   memset(&cbs, 0, sizeof(cbs));
   cbs.on_ping_success = my_ping_success;
   cbs.on_ping_timeout = my_ping_timeout;
+  cbs.on_ping_end = my_ping_end;
   
   last_ping_result = false;
+  ping_done = false;
   esp_ping_handle_t ping_handle;
   if (esp_ping_new_session(&ping_config, &cbs, &ping_handle) == ESP_OK) {
     esp_ping_start(ping_handle);
-    delay(100);
+    unsigned long startTime = millis();
+    while (!ping_done && (millis() - startTime < 1500)) {
+      delay(10);
+    }
     esp_ping_stop(ping_handle);
     esp_ping_delete_session(ping_handle);
   }
