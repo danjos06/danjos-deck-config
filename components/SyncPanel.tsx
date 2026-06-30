@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, RefreshCw, Usb, Wifi, Trash2 } from 'lucide-react';
+import { Download, RefreshCw, Usb, Wifi, Trash2, Monitor } from 'lucide-react';
 import { DanjosDeckConfig } from '@/lib/types';
 import { syncConfigToDevice, importConfigFromDevice, syncConfigViaWiFi } from '@/lib/syncProtocol';
 import { generateFirmware } from '@/lib/firmwareTemplate';
@@ -45,6 +45,9 @@ export function SyncPanel({ config, isConnected, onConnect, writeText, writeBina
   const handleDownloadConfig = () => {
     // Generate config.txt content
     let content = `PAGES ${config.pages.length}\n`;
+    if (config.pcIp) {
+      content += `PCIP ${config.pcIp}\n`;
+    }
     config.pages.forEach((page, pIdx) => {
       page.buttons.forEach((btn, bIdx) => {
         if (btn.action.type !== 'none') {
@@ -345,6 +348,31 @@ export function SyncPanel({ config, isConnected, onConnect, writeText, writeBina
           </div>
         </div>
         
+        {/* Step 3: PC Auto Power Off */}
+        <div className="pt-4 border-t border-[#3d3d3d] space-y-3">
+          <h3 className="text-sm font-medium text-gray-200 flex items-center gap-2">
+            <Monitor className="w-4 h-4 text-gray-400" />
+            {lang === 'pt' ? 'Desligar Telas Automaticamente (Ping)' : 'Auto-off Screens (Ping)'}
+          </h3>
+          <p className="text-xs text-gray-400 leading-normal">
+            {lang === 'pt' 
+              ? 'Insira o IP do seu computador. O Danjos Deck enviará um ping a cada minuto; se o computador não responder (ex: se estiver desligado), as telas serão apagadas para economizar energia e reativadas quando ele responder novamente.' 
+              : 'Enter your computer\'s IP address. Danjos Deck will ping it every minute; if there is no response (e.g. computer is off), the screens will turn off to save power and turn back on when the computer starts.'}
+          </p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder={lang === 'pt' ? 'IP do Computador (ex: 192.168.1.100)' : 'Computer IP (e.g. 192.168.1.100)'}
+              value={config.pcIp || ''}
+              onChange={(e) => {
+                const newConfig = { ...config, pcIp: e.target.value };
+                if (onConfigImported) onConfigImported(newConfig);
+              }}
+              className="w-full bg-[#1e1e1e] border border-[#3d3d3d] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
+
         <div className="pt-4 border-t border-[#3d3d3d] space-y-3">
            <h3 className="text-sm font-medium text-red-400">{lang === 'pt' ? 'Zona de Perigo' : 'Danger Zone'}</h3>
            <p className="text-xs text-gray-400">

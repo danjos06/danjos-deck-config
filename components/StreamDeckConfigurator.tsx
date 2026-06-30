@@ -36,7 +36,8 @@ const DEFAULT_CONFIG: DanjosDeckConfig = {
     ccwAction: { type: 'consumer', consumer: 'VOLUME_DECREMENT' },
     btnAction: { type: 'consumer', consumer: 'MUTE' }
   },
-  pins: DEFAULT_PINS
+  pins: DEFAULT_PINS,
+  pcIp: ''
 };
 
 export default function StreamDeckConfigurator() {

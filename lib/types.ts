@@ -109,4 +109,5 @@ export interface DanjosDeckConfig {
   encoder1: EncoderConfig;
   encoder2: EncoderConfig;
   pins: PinConfig;
+  pcIp?: string;
 }

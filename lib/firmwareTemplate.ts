@@ -50,26 +50,27 @@ export const generateFirmware = (config: DanjosDeckConfig, ssid: string = '', pa
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ArduinoOTA.h>
+#include "ping/ping_sock.h"
 
 // --- PINS (Hardcoded Defaults) ---
 int PIN_BTN[6] = {
-  ${pins?.btn1Enabled !== false ? (pins?.btn1 ?? 1) : -1}, 
-  ${pins?.btn2Enabled !== false ? (pins?.btn2 ?? 2) : -1}, 
-  ${pins?.btn3Enabled !== false ? (pins?.btn3 ?? 3) : -1}, 
-  ${pins?.btn4Enabled !== false ? (pins?.btn4 ?? 4) : -1}, 
-  ${pins?.btn5Enabled !== false ? (pins?.btn5 ?? 5) : -1}, 
-  ${pins?.btn6Enabled !== false ? (pins?.btn6 ?? 6) : -1}
+  \${pins?.btn1Enabled !== false ? (pins?.btn1 ?? 1) : -1}, 
+  \${pins?.btn2Enabled !== false ? (pins?.btn2 ?? 2) : -1}, 
+  \${pins?.btn3Enabled !== false ? (pins?.btn3 ?? 3) : -1}, 
+  \${pins?.btn4Enabled !== false ? (pins?.btn4 ?? 4) : -1}, 
+  \${pins?.btn5Enabled !== false ? (pins?.btn5 ?? 5) : -1}, 
+  \${pins?.btn6Enabled !== false ? (pins?.btn6 ?? 6) : -1}
 };
-int PIN_PREV = ${pins?.btnPrevEnabled !== false ? (pins?.btnPrev ?? 7) : -1};
-int PIN_NEXT = ${pins?.btnNextEnabled !== false ? (pins?.btnNext ?? 15) : -1};
-int PIN_ENC1_CLK = ${pins?.enc1Enabled !== false ? (pins?.enc1Clk ?? 16) : -1};
-int PIN_ENC1_DT = ${pins?.enc1Enabled !== false ? (pins?.enc1Dt ?? 17) : -1};
-int PIN_ENC1_BTN = ${pins?.enc1Enabled !== false ? (pins?.enc1Btn ?? 18) : -1};
-int PIN_ENC2_CLK = ${pins?.enc2Enabled !== false ? (pins?.enc2Clk ?? 20) : -1};
-int PIN_ENC2_DT = ${pins?.enc2Enabled !== false ? (pins?.enc2Dt ?? 21) : -1};
-int PIN_ENC2_BTN = ${pins?.enc2Enabled !== false ? (pins?.enc2Btn ?? 41) : -1};
-int PIN_SDA = ${pins ? pins.sda : 8};
-int PIN_SCL = ${pins ? pins.scl : 9};
+int PIN_PREV = \${pins?.btnPrevEnabled !== false ? (pins?.btnPrev ?? 7) : -1};
+int PIN_NEXT = \${pins?.btnNextEnabled !== false ? (pins?.btnNext ?? 15) : -1};
+int PIN_ENC1_CLK = \${pins?.enc1Enabled !== false ? (pins?.enc1Clk ?? 16) : -1};
+int PIN_ENC1_DT = \${pins?.enc1Enabled !== false ? (pins?.enc1Dt ?? 17) : -1};
+int PIN_ENC1_BTN = \${pins?.enc1Enabled !== false ? (pins?.enc1Btn ?? 18) : -1};
+int PIN_ENC2_CLK = \${pins?.enc2Enabled !== false ? (pins?.enc2Clk ?? 20) : -1};
+int PIN_ENC2_DT = \${pins?.enc2Enabled !== false ? (pins?.enc2Dt ?? 21) : -1};
+int PIN_ENC2_BTN = \${pins?.enc2Enabled !== false ? (pins?.enc2Btn ?? 41) : -1};
+int PIN_SDA = \${pins ? pins.sda : 8};
+int PIN_SCL = \${pins ? pins.scl : 9};
 
 // --- DISPLAY SETTINGS ---
 #define SCREEN_WIDTH 128
@@ -88,8 +89,69 @@ int currentPage = 0;
 int totalPages = 1;
 bool isSyncing = false;
 
-const char* wifi_ssid = "${ssid}";
-const char* wifi_password = "${password}";
+const char* wifi_ssid = "\${ssid}";
+const char* wifi_password = "\${password}";
+String pc_ip = "${config.pcIp || ''}";
+bool screensOn = true;
+unsigned long lastPingTime = 0;
+const unsigned long PING_INTERVAL = 60000; // 1 minute
+bool last_ping_result = false;
+
+static void my_ping_success(esp_ping_handle_t hdl, void *args) {
+  last_ping_result = true;
+}
+
+static void my_ping_timeout(esp_ping_handle_t hdl, void *args) {
+  last_ping_result = false;
+}
+
+bool pingIP(const String& ip_str) {
+  if (ip_str == "") return false;
+  IPAddress ip;
+  if (!ip.fromString(ip_str)) return false;
+  
+  ip_addr_t target_addr;
+  IP_ADDR4(&target_addr, ip[0], ip[1], ip[2], ip[3]);
+  
+  esp_ping_config_t ping_config = ESP_PING_DEFAULT_CONFIG();
+  ping_config.target_addr = target_addr;
+  ping_config.count = 1;
+  
+  esp_ping_callbacks_t cbs = {
+    .on_ping_success = my_ping_success,
+    .on_ping_timeout = my_ping_timeout,
+    .on_ping_end = NULL,
+    .cb_args = NULL
+  };
+  
+  last_ping_result = false;
+  esp_ping_handle_t ping_handle;
+  if (esp_ping_new_session(&ping_config, &cbs, &ping_handle) == ESP_OK) {
+    esp_ping_start(ping_handle);
+    delay(100);
+    esp_ping_stop(ping_handle);
+    esp_ping_delete_session(ping_handle);
+  }
+  return last_ping_result;
+}
+
+void updateDisplays();
+
+void setDisplaysOn(bool on) {
+  if (screensOn == on) return;
+  screensOn = on;
+  for (int i = 0; i < 6; i++) {
+    tcaselect(i);
+    if (on) {
+      display.ssd1306_command(SSD1306_DISPLAYON);
+    } else {
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
+    }
+  }
+  if (on) {
+    updateDisplays();
+  }
+}
 
 struct Action {
   uint8_t type; // 0=none, 1=kb, 2=cons, 3=mouse, 4=seq, 5=cpp
@@ -164,6 +226,7 @@ void loadConfig() {
   totalPages = 1;
   memset(actions, 0, sizeof(actions));
   memset(macroLen, 0, sizeof(macroLen));
+  pc_ip = "${config.pcIp || ''}";
 
   File f = LittleFS.open("/config.txt", "r");
   if (!f) return;
@@ -172,6 +235,9 @@ void loadConfig() {
     line.trim();
     if (line.startsWith("PAGES ")) {
       totalPages = line.substring(6).toInt();
+    } else if (line.startsWith("PCIP ")) {
+      pc_ip = line.substring(5);
+      pc_ip.trim();
     } else if (line.startsWith("ACT ")) {
       // ACT <b> <p> <t> <m> <k> <v1> <v2>
       int b, p, t, m, k, v1, v2;
@@ -240,6 +306,7 @@ void runStep(uint8_t t, uint8_t m, uint16_t k, int16_t v1, int16_t v2) {
 }
 
 void executeAction(int b, int p) {
+  if (!screensOn) return;
   // Hardcoded C++ Actions
   ${generateEmbeddedActions()}
 
@@ -273,7 +340,7 @@ void processCommand(String cmd) {
     loadConfig();
     updateDisplays();
     Serial.println("OK");
-  } else if (cmd.startsWith("ACT ") || cmd.startsWith("SEQ ") || cmd.startsWith("PAGES ")) {
+  } else if (cmd.startsWith("ACT ") || cmd.startsWith("SEQ ") || cmd.startsWith("PAGES ") || cmd.startsWith("PCIP ")) {
     File f = LittleFS.open("/config.txt", "a");
     f.println(cmd);
     f.close();
@@ -397,6 +464,20 @@ void loop() {
     cmd.trim();
     if (cmd.length() > 0) processCommand(cmd);
   }
+
+  // Monitor computer IP ping status to auto-off screens
+  if (WiFi.status() == WL_CONNECTED && pc_ip != "") {
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastPingTime >= PING_INTERVAL || lastPingTime == 0) {
+      lastPingTime = currentMillis;
+      bool success = pingIP(pc_ip);
+      setDisplaysOn(success);
+    }
+  } else {
+    // Re-enable displays if WiFi is not connected or IP is empty
+    setDisplaysOn(true);
+  }
+
   if (isSyncing) return;
 
   for (int i = 0; i < 6; i++) {

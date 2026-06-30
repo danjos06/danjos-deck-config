@@ -110,9 +110,7 @@ export async function syncConfigViaWiFi(
       }
     }
 
-    if (type !== 0 && type !== 4) {
-      await sendCommand(`ACT ${btnIdx} ${pageIdx} ${type} ${mod} ${key} ${v1} ${v2}`);
-    }
+    await sendCommand(`ACT ${btnIdx} ${pageIdx} ${type} ${mod} ${key} ${v1} ${v2}`);
   };
 
   let totalButtons = config.pages.length * 6;
@@ -130,6 +128,11 @@ export async function syncConfigViaWiFi(
     }
   }
 
+  // Sync PC IP
+  if (config.pcIp !== undefined) {
+    await sendCommand(`PCIP ${config.pcIp}`);
+  }
+
   for (let p = 0; p < config.pages.length; p++) {
     const page = config.pages[p];
     for (let b = 0; b < 6; b++) {
@@ -137,7 +140,7 @@ export async function syncConfigViaWiFi(
       if (!btn) continue;
       
       const action = btn.action;
-      if (action && action.type !== 'none' && action.type !== 'cpp' && action.type !== 'text') {
+      if (action) {
         await sendAction(b, p, action);
       }
 
@@ -153,13 +156,13 @@ export async function syncConfigViaWiFi(
   }
 
   onProgress('Sending encoder settings...', 95);
-  if (config.encoder1.cwAction.type !== 'none' && config.encoder1.cwAction.type !== 'cpp' && config.encoder1.cwAction.type !== 'text') await sendAction(6, 0, config.encoder1.cwAction);
-  if (config.encoder1.ccwAction.type !== 'none' && config.encoder1.ccwAction.type !== 'cpp' && config.encoder1.ccwAction.type !== 'text') await sendAction(7, 0, config.encoder1.ccwAction);
-  if (config.encoder1.btnAction.type !== 'none' && config.encoder1.btnAction.type !== 'cpp' && config.encoder1.btnAction.type !== 'text') await sendAction(8, 0, config.encoder1.btnAction);
+  await sendAction(6, 0, config.encoder1.cwAction);
+  await sendAction(7, 0, config.encoder1.ccwAction);
+  await sendAction(8, 0, config.encoder1.btnAction);
   
-  if (config.encoder2.cwAction.type !== 'none' && config.encoder2.cwAction.type !== 'cpp' && config.encoder2.cwAction.type !== 'text') await sendAction(9, 0, config.encoder2.cwAction);
-  if (config.encoder2.ccwAction.type !== 'none' && config.encoder2.ccwAction.type !== 'cpp' && config.encoder2.ccwAction.type !== 'text') await sendAction(10, 0, config.encoder2.ccwAction);
-  if (config.encoder2.btnAction.type !== 'none' && config.encoder2.btnAction.type !== 'cpp' && config.encoder2.btnAction.type !== 'text') await sendAction(11, 0, config.encoder2.btnAction);
+  await sendAction(9, 0, config.encoder2.cwAction);
+  await sendAction(10, 0, config.encoder2.ccwAction);
+  await sendAction(11, 0, config.encoder2.btnAction);
 
   onProgress('Saving configuration...', 98);
   await sendCommand('SAVE');
@@ -203,11 +206,20 @@ export async function syncConfigToDevice(
     await writeText(`PAGES ${config.pages.length}`);
     await waitForResponse('OK', 2000);
 
+    // Send PC IP config
+    onProgress('Sending PC IP configuration...', 12);
+    if (config.pcIp !== undefined) {
+      await writeText(`PCIP ${config.pcIp}`);
+      await waitForResponse('OK', 2000);
+    }
+
     // Helper to send actions
     const sendAction = async (btnIdx: number, pageIdx: number, action: ButtonAction) => {
       let type = 0;
       let mod = 0;
       let key = 0;
+      let v1 = 0;
+      let v2 = 0;
 
       if (action.type === 'keyboard' && action.keyboard) {
         type = 1;
@@ -224,9 +236,59 @@ export async function syncConfigToDevice(
       } else if (action.type === 'consumer' && action.consumer) {
         type = 2;
         key = getKeyCode(action.consumer || '');
+      } else if (action.type === 'mouse' && action.mouse) {
+        type = 3;
+        if (action.mouse.actionType === 'click') {
+          key = action.mouse.button === 'left' ? 1 : action.mouse.button === 'right' ? 2 : 3;
+        } else if (action.mouse.actionType === 'move') {
+          key = 4;
+          v1 = action.mouse.x || 0;
+          v2 = action.mouse.y || 0;
+        } else if (action.mouse.actionType === 'scroll') {
+          key = 5;
+          v1 = action.mouse.amount || 0;
+        }
+      } else if (action.type === 'sequence' && action.sequence) {
+        type = 4;
+        for (let i = 0; i < action.sequence.length; i++) {
+          const step = action.sequence[i];
+          let st = 0, sm = 0, sk = 0, sv1 = 0, sv2 = 0, sd = step.delayMs || 0;
+          if (step.type === 'keyboard' && step.keyboard) {
+            st = 1;
+            if (step.keyboard.modifiers) {
+              if (step.keyboard.modifiers.leftCtrl) sm |= 1;
+              if (step.keyboard.modifiers.leftShift) sm |= 2;
+              if (step.keyboard.modifiers.leftAlt) sm |= 4;
+              if (step.keyboard.modifiers.leftGui) sm |= 8;
+              if (step.keyboard.modifiers.rightCtrl) sm |= 16;
+              if (step.keyboard.modifiers.rightShift) sm |= 32;
+              if (step.keyboard.modifiers.rightAlt) sm |= 64;
+            }
+            sk = getKeyCode(step.keyboard.key || '');
+          } else if (step.type === 'consumer' && step.consumer) {
+            st = 2;
+            sk = getKeyCode(step.consumer || '');
+          } else if (step.type === 'mouse' && step.mouse) {
+            st = 3;
+            if (step.mouse.actionType === 'click') {
+              sk = step.mouse.button === 'left' ? 1 : step.mouse.button === 'right' ? 2 : 3;
+            } else if (step.mouse.actionType === 'move') {
+              sk = 4;
+              sv1 = step.mouse.x || 0;
+              sv2 = step.mouse.y || 0;
+            } else if (step.mouse.actionType === 'scroll') {
+              sk = 5;
+              sv1 = step.mouse.amount || 0;
+            }
+          } else if (step.type === 'delay') {
+            st = 4;
+          }
+          await writeText(`SEQ ${btnIdx} ${pageIdx} ${i} ${st} ${sm} ${sk} ${sv1} ${sv2} ${sd}`);
+          await waitForResponse('OK', 2000);
+        }
       }
 
-      await writeText(`ACTION ${btnIdx} ${pageIdx} ${type} ${mod} ${key}`);
+      await writeText(`ACT ${btnIdx} ${pageIdx} ${type} ${mod} ${key} ${v1} ${v2}`);
       await waitForResponse('OK', 2000);
     };
 
@@ -249,7 +311,7 @@ export async function syncConfigToDevice(
         if (!btn) continue;
         
         const action = btn.action;
-        if (action && action.type !== 'none') {
+        if (action) {
           await sendAction(b, p, action);
         }
 
@@ -271,13 +333,13 @@ export async function syncConfigToDevice(
     // 4. Send encoder actions
     onProgress('Sending encoder settings...', 95);
     // Encoder 1 (slots 6, 7, 8)
-    if (config.encoder1.cwAction.type !== 'none' && config.encoder1.cwAction.type !== 'cpp' && config.encoder1.cwAction.type !== 'text') await sendAction(6, 0, config.encoder1.cwAction);
-    if (config.encoder1.ccwAction.type !== 'none' && config.encoder1.ccwAction.type !== 'cpp' && config.encoder1.ccwAction.type !== 'text') await sendAction(7, 0, config.encoder1.ccwAction);
-    if (config.encoder1.btnAction.type !== 'none' && config.encoder1.btnAction.type !== 'cpp' && config.encoder1.btnAction.type !== 'text') await sendAction(8, 0, config.encoder1.btnAction);
+    await sendAction(6, 0, config.encoder1.cwAction);
+    await sendAction(7, 0, config.encoder1.ccwAction);
+    await sendAction(8, 0, config.encoder1.btnAction);
     // Encoder 2 (slots 9, 10, 11)
-    if (config.encoder2.cwAction.type !== 'none' && config.encoder2.cwAction.type !== 'cpp' && config.encoder2.cwAction.type !== 'text') await sendAction(9, 0, config.encoder2.cwAction);
-    if (config.encoder2.ccwAction.type !== 'none' && config.encoder2.ccwAction.type !== 'cpp' && config.encoder2.ccwAction.type !== 'text') await sendAction(10, 0, config.encoder2.ccwAction);
-    if (config.encoder2.btnAction.type !== 'none' && config.encoder2.btnAction.type !== 'cpp' && config.encoder2.btnAction.type !== 'text') await sendAction(11, 0, config.encoder2.btnAction);
+    await sendAction(9, 0, config.encoder2.cwAction);
+    await sendAction(10, 0, config.encoder2.ccwAction);
+    await sendAction(11, 0, config.encoder2.btnAction);
 
     // 5. Commit and reload
     onProgress('Finalizing...', 99);
@@ -386,6 +448,8 @@ function parseExportedConfig(lines: string[], bitmaps: { b: number, p: number, h
   for (const line of lines) {
     if (line.startsWith('PAGES ')) {
       totalPages = parseInt(line.substring(6)) || 1;
+    } else if (line.startsWith('PCIP ')) {
+      config.pcIp = line.substring(5).trim();
     }
   }
 
