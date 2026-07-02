@@ -107,6 +107,8 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
       newAction.cpp = { code: 'Keyboard.print("Hello World!");' };
     } else if (type === 'sequence') {
       newAction.sequence = [];
+    } else if (type === 'open_folder') {
+      newAction.folderId = config.folders && config.folders.length > 0 ? config.folders[0].id : '';
     }
     setAction(newAction);
   };
@@ -130,7 +132,7 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-300">{t.actionType}</label>
             <div className="grid grid-cols-2 gap-2">
-              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence'].map((type) => (
+              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence', 'open_folder'].map((type) => (
                 <button
                   key={type}
                   onClick={() => updateActionType(type as ActionType)}
@@ -308,6 +310,30 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
             >
               {consumerActions.map(ca => <option key={ca.value} value={ca.value}>{ca.icon} {ca.label}</option>)}
             </select>
+          )}
+
+          {action.type === 'open_folder' && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-300">{t.selectFolderToOpen}</label>
+              {config.folders && config.folders.length > 0 ? (
+                <select
+                  value={action.folderId || ''}
+                  onChange={(e) => setAction({ ...action, folderId: e.target.value })}
+                  className="w-full bg-[#252525] border border-[#3d3d3d] text-xs text-white p-2 rounded"
+                >
+                  <option value="" disabled>{lang === 'pt' ? 'Selecione uma pasta...' : 'Select a folder...'}</option>
+                  {config.folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="text-xs text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded">
+                  {lang === 'pt' 
+                    ? 'Nenhuma pasta criada ainda. Por favor, crie uma pasta primeiro no editor.' 
+                    : 'No folders created yet. Please create a folder first in the editor.'}
+                </div>
+              )}
+            </div>
           )}
 
         </div>

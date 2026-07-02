@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { ButtonState } from '../lib/types';
+import { ButtonState, FolderConfig } from '../lib/types';
 import BitmapCanvas from './BitmapCanvas';
 import { imageToBitmap } from '../lib/imageConverter';
 import { Camera } from 'lucide-react';
@@ -14,9 +14,10 @@ interface ButtonCardProps {
   onSelect?: () => void;
   t: any;
   isBackButton?: boolean;
+  folders?: FolderConfig[];
 }
 
-export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t, isBackButton }: ButtonCardProps) {
+export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t, isBackButton, folders }: ButtonCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,6 +58,16 @@ export default function ButtonCard({ button, index, onUpdate, isSelected, onSele
           </div>
         ) : button.bitmap && button.bitmap.some(b => b !== 0) ? (
           <BitmapCanvas bitmap={button.bitmap} width={128} height={64} className="w-full h-full object-contain p-2" />
+        ) : button.action?.type === 'open_folder' ? (
+          <div className="flex flex-col items-center justify-center p-2 text-yellow-500">
+            <span className="material-symbols-rounded text-2xl mb-1">folder</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-center break-words line-clamp-2 max-w-[80px]">
+              {button.label || (() => {
+                const targetFolder = folders?.find(f => f.id === button.action?.folderId);
+                return targetFolder ? targetFolder.name : (t.folder || 'Folder');
+              })()}
+            </span>
+          </div>
         ) : (
           <div className="text-center p-2">
             <span className="text-xs text-gray-400 font-medium break-words line-clamp-2">{button.label || t.empty}</span>

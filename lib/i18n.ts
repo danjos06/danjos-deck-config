@@ -169,6 +169,8 @@ export const translations = {
     selectFolder: 'Select Folder',
     moveToFolder: 'Move to Folder',
     removeFromFolder: 'Remove from Folder',
+    open_folder: 'Open Folder',
+    selectFolderToOpen: 'Select Folder to Open',
   },
   pt: {
     title: 'Danjos Deck',
@@ -340,6 +342,8 @@ export const translations = {
     selectFolder: 'Selecionar Pasta',
     moveToFolder: 'Mover para Pasta',
     removeFromFolder: 'Remover da Pasta',
+    open_folder: 'Abrir Pasta',
+    selectFolderToOpen: 'Selecionar Pasta para Abrir',
   }
 };
 

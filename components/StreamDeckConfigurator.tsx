@@ -583,6 +583,7 @@ export default function StreamDeckConfigurator() {
                       t={t} 
                       backButtonIdx={getBackButtonIdx()}
                       onBackClick={() => selectFolder(null)}
+                      folders={config.folders}
                     />
                   </div>
 
@@ -981,6 +982,22 @@ export default function StreamDeckConfigurator() {
                             <div className="text-[10px] font-mono text-blue-400 truncate bg-blue-900/10 border border-blue-900/20 px-2 py-1 rounded italic mb-1.5">
                               {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}
                             </div>
+                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type === 'open_folder' && (() => {
+                              const folderId = config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folderId;
+                              const destFolder = (config.folders || []).find(f => f.id === folderId);
+                              if (destFolder) {
+                                return (
+                                  <button
+                                    onClick={() => selectFolder(destFolder.id)}
+                                    className="w-full py-1.5 mb-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 shadow"
+                                  >
+                                    <span className="material-symbols-rounded text-xs">folder</span>
+                                    <span>{lang === 'pt' ? `Entrar em "${destFolder.name}"` : `Enter "${destFolder.name}"`}</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                             <button 
                               onClick={() => openButtonActionModal(selectedButtonIdx)} 
                               className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all"
@@ -995,8 +1012,24 @@ export default function StreamDeckConfigurator() {
                       <div className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full py-6 space-y-4">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">{t.currentAction}</label>
-                          <div className="w-full h-11 bg-[#111] border border-[#2d2d2d] text-xs text-blue-400 font-mono px-4 flex items-center rounded italic">
-                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}
+                          <div className="w-full h-11 bg-[#111] border border-[#2d2d2d] text-xs text-blue-400 font-mono px-4 flex items-center justify-between rounded italic">
+                            <span>{config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}</span>
+                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type === 'open_folder' && (() => {
+                              const folderId = config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folderId;
+                              const destFolder = (config.folders || []).find(f => f.id === folderId);
+                              if (destFolder) {
+                                return (
+                                  <button
+                                    onClick={() => selectFolder(destFolder.id)}
+                                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center space-x-1"
+                                  >
+                                    <span className="material-symbols-rounded text-[11px]">folder</span>
+                                    <span>{lang === 'pt' ? 'Entrar' : 'Enter'}</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </div>
 

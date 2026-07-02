@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PageConfig, ButtonState } from '../lib/types';
+import { PageConfig, ButtonState, FolderConfig } from '../lib/types';
 import ButtonCard from './ButtonCard';
 
 interface ButtonGridProps {
@@ -12,6 +12,7 @@ interface ButtonGridProps {
   t: any;
   backButtonIdx?: number;
   onBackClick?: () => void;
+  folders?: FolderConfig[];
 }
 
 export default function ButtonGrid({ 
@@ -21,7 +22,8 @@ export default function ButtonGrid({
   onSelectButton, 
   t, 
   backButtonIdx, 
-  onBackClick 
+  onBackClick,
+  folders
 }: ButtonGridProps) {
   const handleUpdateBtn = (index: number, newBtnState: ButtonState) => {
     const newButtons = [...page.buttons];
@@ -50,6 +52,7 @@ export default function ButtonGrid({
               onSelect={isBackButton ? onBackClick : () => onSelectButton?.(idx)}
               t={t}
               isBackButton={isBackButton}
+              folders={folders}
             />
           );
         })}

@@ -72,6 +72,17 @@ export async function syncConfigViaWiFi(
         key = 5;
         v1 = action.mouse.amount || 0;
       }
+    } else if (action.type === 'open_folder' && action.folderId) {
+      const folders = config.folders || [];
+      const folder = folders.find(f => f.id === action.folderId);
+      if (folder && folder.pageIds.length > 0) {
+        const destPageId = folder.pageIds[0];
+        const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
+        if (destPageIdx !== -1) {
+          type = 5; // Page Navigation / Jump
+          key = destPageIdx;
+        }
+      }
     } else if (action.type === 'sequence' && action.sequence) {
       type = 4;
       for (let i = 0; i < action.sequence.length; i++) {
@@ -268,6 +279,17 @@ export async function syncConfigToDevice(
         } else if (action.mouse.actionType === 'scroll') {
           key = 5;
           v1 = action.mouse.amount || 0;
+        }
+      } else if (action.type === 'open_folder' && action.folderId) {
+        const folders = config.folders || [];
+        const folder = folders.find(f => f.id === action.folderId);
+        if (folder && folder.pageIds.length > 0) {
+          const destPageId = folder.pageIds[0];
+          const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
+          if (destPageIdx !== -1) {
+            type = 5; // Page Navigation / Jump
+            key = destPageIdx;
+          }
         }
       } else if (action.type === 'sequence' && action.sequence) {
         type = 4;
