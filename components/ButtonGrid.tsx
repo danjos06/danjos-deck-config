@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PageConfig, ButtonState, FolderConfig } from '../lib/types';
+import { PageConfig, ButtonState } from '../lib/types';
 import ButtonCard from './ButtonCard';
 
 interface ButtonGridProps {
@@ -10,10 +10,8 @@ interface ButtonGridProps {
   selectedButtonIdx?: number;
   onSelectButton?: (index: number) => void;
   t: any;
-  backButtonIdx?: number;
-  onBackClick?: () => void;
-  folders?: FolderConfig[];
-  onEnterFolder?: (folderId: string) => void;
+  pages?: PageConfig[];
+  onJumpToPage?: (pageId: string) => void;
 }
 
 export default function ButtonGrid({ 
@@ -22,10 +20,8 @@ export default function ButtonGrid({
   selectedButtonIdx, 
   onSelectButton, 
   t, 
-  backButtonIdx, 
-  onBackClick,
-  folders,
-  onEnterFolder
+  pages,
+  onJumpToPage
 }: ButtonGridProps) {
   const handleUpdateBtn = (index: number, newBtnState: ButtonState) => {
     const newButtons = [...page.buttons];
@@ -37,25 +33,17 @@ export default function ButtonGrid({
     <div className="flex items-center justify-center">
       <div className="grid grid-cols-3 gap-4">
         {page.buttons.map((btn, idx) => {
-          const isBackButton = idx === backButtonIdx;
-          const currentBtn = isBackButton ? {
-            ...btn,
-            label: btn.label || 'BACK',
-            iconName: 'arrow_back'
-          } : btn;
-
           return (
             <ButtonCard
               key={`${page.id}-btn-${idx}`}
-              button={currentBtn}
+              button={btn}
               index={idx}
               onUpdate={handleUpdateBtn}
-              isSelected={isBackButton ? false : (selectedButtonIdx === idx)}
-              onSelect={isBackButton ? onBackClick : () => onSelectButton?.(idx)}
+              isSelected={selectedButtonIdx === idx}
+              onSelect={() => onSelectButton?.(idx)}
               t={t}
-              isBackButton={isBackButton}
-              folders={folders}
-              onEnterFolder={onEnterFolder}
+              pages={pages}
+              onJumpToPage={onJumpToPage}
             />
           );
         })}

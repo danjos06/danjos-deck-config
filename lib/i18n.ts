@@ -171,6 +171,9 @@ export const translations = {
     removeFromFolder: 'Remove from Folder',
     open_folder: 'Open Folder',
     selectFolderToOpen: 'Select Folder to Open',
+    go_to_page: 'Go to Page',
+    selectPageShortcut: 'Shortcut to Page',
+    selectPageToOpen: 'Select Page to Open',
   },
   pt: {
     title: 'Danjos Deck',
@@ -344,6 +347,9 @@ export const translations = {
     removeFromFolder: 'Remover da Pasta',
     open_folder: 'Abrir Pasta',
     selectFolderToOpen: 'Selecionar Pasta para Abrir',
+    go_to_page: 'Ir para Página',
+    selectPageShortcut: 'Atalho para Página',
+    selectPageToOpen: 'Selecionar Página para Abrir',
   }
 };
 

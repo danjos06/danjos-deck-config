@@ -72,29 +72,11 @@ export async function syncConfigViaWiFi(
         key = 5;
         v1 = action.mouse.amount || 0;
       }
-    } else if (action.type === 'open_folder') {
-      if (action.folderId === 'root') {
-        const folders = config.folders || [];
-        const allFolderPageIds = folders.flatMap(f => f.pageIds);
-        const rootPages = config.pages.filter(p => !allFolderPageIds.includes(p.id));
-        let rootPageIdx = 0;
-        if (rootPages.length > 0) {
-          rootPageIdx = config.pages.findIndex(p => p.id === rootPages[0].id);
-          if (rootPageIdx === -1) rootPageIdx = 0;
-        }
-        type = 5;
-        key = rootPageIdx;
-      } else if (action.folderId) {
-        const folders = config.folders || [];
-        const folder = folders.find(f => f.id === action.folderId);
-        if (folder && folder.pageIds.length > 0) {
-          const destPageId = folder.pageIds[0];
-          const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
-          if (destPageIdx !== -1) {
-            type = 5; // Page Navigation / Jump
-            key = destPageIdx;
-          }
-        }
+    } else if (action.type === 'go_to_page' && action.targetPageId) {
+      const destPageIdx = config.pages.findIndex(p => p.id === action.targetPageId);
+      if (destPageIdx !== -1) {
+        type = 5; // Page Navigation / Jump
+        key = destPageIdx;
       }
     } else if (action.type === 'sequence' && action.sequence) {
       type = 4;
@@ -160,35 +142,18 @@ export async function syncConfigViaWiFi(
 
   for (let p = 0; p < config.pages.length; p++) {
     const page = config.pages[p];
-    
-    // Check if page belongs to any folder
-    const folders = config.folders || [];
-    const parentFolder = folders.find(f => f.pageIds.includes(page.id));
-    const backButtonIdx = parentFolder 
-      ? (parentFolder.backButtonPos === 'btn-1' ? 0 : parentFolder.backButtonPos === 'btn-6' ? 5 : undefined)
-      : undefined;
 
     for (let b = 0; b < 6; b++) {
       const btn = page.buttons[b];
       if (!btn) continue;
       
-      const isBackButton = backButtonIdx === b;
-      const action = isBackButton ? { type: 'open_folder', folderId: 'root' } as ButtonAction : btn.action;
+      const action = btn.action;
       if (action) {
         await sendAction(b, p, action);
       }
 
       // Send bitmap
       let bitmap = btn.bitmap;
-      if (isBackButton) {
-        bitmap = await generateIconBitmap({
-          iconName: 'arrow_back',
-          label: 'BACK',
-          iconSize: 24,
-          layout: 'icon-text-below',
-          showBorder: true
-        });
-      }
 
       if (bitmap && bitmap.length === 1024) {
         onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);
@@ -293,29 +258,11 @@ export async function syncConfigToDevice(
           key = 5;
           v1 = action.mouse.amount || 0;
         }
-      } else if (action.type === 'open_folder') {
-        if (action.folderId === 'root') {
-          const folders = config.folders || [];
-          const allFolderPageIds = folders.flatMap(f => f.pageIds);
-          const rootPages = config.pages.filter(p => !allFolderPageIds.includes(p.id));
-          let rootPageIdx = 0;
-          if (rootPages.length > 0) {
-            rootPageIdx = config.pages.findIndex(p => p.id === rootPages[0].id);
-            if (rootPageIdx === -1) rootPageIdx = 0;
-          }
-          type = 5;
-          key = rootPageIdx;
-        } else if (action.folderId) {
-          const folders = config.folders || [];
-          const folder = folders.find(f => f.id === action.folderId);
-          if (folder && folder.pageIds.length > 0) {
-            const destPageId = folder.pageIds[0];
-            const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
-            if (destPageIdx !== -1) {
-              type = 5; // Page Navigation / Jump
-              key = destPageIdx;
-            }
-          }
+      } else if (action.type === 'go_to_page' && action.targetPageId) {
+        const destPageIdx = config.pages.findIndex(p => p.id === action.targetPageId);
+        if (destPageIdx !== -1) {
+          type = 5; // Page Navigation / Jump
+          key = destPageIdx;
         }
       } else if (action.type === 'sequence' && action.sequence) {
         type = 4;
@@ -375,34 +322,18 @@ export async function syncConfigToDevice(
 
     for (let p = 0; p < config.pages.length; p++) {
       const page = config.pages[p];
-      
-      const folders = config.folders || [];
-      const parentFolder = folders.find(f => f.pageIds.includes(page.id));
-      const backButtonIdx = parentFolder 
-        ? (parentFolder.backButtonPos === 'btn-1' ? 0 : parentFolder.backButtonPos === 'btn-6' ? 5 : undefined)
-        : undefined;
 
       for (let b = 0; b < 6; b++) {
         const btn = page.buttons[b];
         if (!btn) continue;
         
-        const isBackButton = backButtonIdx === b;
-        const action = isBackButton ? { type: 'open_folder', folderId: 'root' } as ButtonAction : btn.action;
+        const action = btn.action;
         if (action) {
           await sendAction(b, p, action);
         }
 
         // Send bitmap
         let bitmap = btn.bitmap;
-        if (isBackButton) {
-          bitmap = await generateIconBitmap({
-            iconName: 'arrow_back',
-            label: 'BACK',
-            iconSize: 24,
-            layout: 'icon-text-below',
-            showBorder: true
-          });
-        }
 
         if (bitmap && bitmap.length === 1024) {
           onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);

@@ -1,4 +1,4 @@
-export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'open_folder' | 'none';
+export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'go_to_page' | 'none';
 
 export type ConsumerAction =
   | 'VOLUME_INCREMENT'
@@ -55,7 +55,7 @@ export interface ButtonAction {
   mouse?: MouseAction;
   cpp?: CppAction;
   sequence?: SequenceStep[];
-  folderId?: string;
+  targetPageId?: string;
 }
 
 export interface ButtonState {
