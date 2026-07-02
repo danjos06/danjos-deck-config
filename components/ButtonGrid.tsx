@@ -13,6 +13,7 @@ interface ButtonGridProps {
   backButtonIdx?: number;
   onBackClick?: () => void;
   folders?: FolderConfig[];
+  onEnterFolder?: (folderId: string) => void;
 }
 
 export default function ButtonGrid({ 
@@ -23,7 +24,8 @@ export default function ButtonGrid({
   t, 
   backButtonIdx, 
   onBackClick,
-  folders
+  folders,
+  onEnterFolder
 }: ButtonGridProps) {
   const handleUpdateBtn = (index: number, newBtnState: ButtonState) => {
     const newButtons = [...page.buttons];
@@ -53,6 +55,7 @@ export default function ButtonGrid({
               t={t}
               isBackButton={isBackButton}
               folders={folders}
+              onEnterFolder={onEnterFolder}
             />
           );
         })}

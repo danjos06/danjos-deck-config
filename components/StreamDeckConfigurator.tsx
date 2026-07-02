@@ -584,6 +584,7 @@ export default function StreamDeckConfigurator() {
                       backButtonIdx={getBackButtonIdx()}
                       onBackClick={() => selectFolder(null)}
                       folders={config.folders}
+                      onEnterFolder={selectFolder}
                     />
                   </div>
 

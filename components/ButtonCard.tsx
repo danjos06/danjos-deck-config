@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { ButtonState, FolderConfig } from '../lib/types';
 import BitmapCanvas from './BitmapCanvas';
 import { imageToBitmap } from '../lib/imageConverter';
-import { Camera } from 'lucide-react';
+import { Camera, FolderOpen } from 'lucide-react';
 
 interface ButtonCardProps {
   button: ButtonState;
@@ -15,9 +15,10 @@ interface ButtonCardProps {
   t: any;
   isBackButton?: boolean;
   folders?: FolderConfig[];
+  onEnterFolder?: (folderId: string) => void;
 }
 
-export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t, isBackButton, folders }: ButtonCardProps) {
+export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t, isBackButton, folders, onEnterFolder }: ButtonCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,9 +75,21 @@ export default function ButtonCard({ button, index, onUpdate, isSelected, onSele
           </div>
         )}
         
-        {/* Overlay upload button (disabled if back button) */}
+        {/* Overlay buttons (disabled if back button) */}
         {!isBackButton && (
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+            {button.action?.type === 'open_folder' && button.action.folderId && onEnterFolder && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEnterFolder(button.action!.folderId!);
+                }}
+                className="bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-full shadow-lg border border-yellow-500 transition-colors"
+                title={t.openFolder || 'Open Folder'}
+              >
+                <FolderOpen size={16} />
+              </button>
+            )}
             <button 
               onClick={(e) => {
                 e.stopPropagation();

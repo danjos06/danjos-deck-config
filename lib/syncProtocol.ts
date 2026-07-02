@@ -72,15 +72,28 @@ export async function syncConfigViaWiFi(
         key = 5;
         v1 = action.mouse.amount || 0;
       }
-    } else if (action.type === 'open_folder' && action.folderId) {
-      const folders = config.folders || [];
-      const folder = folders.find(f => f.id === action.folderId);
-      if (folder && folder.pageIds.length > 0) {
-        const destPageId = folder.pageIds[0];
-        const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
-        if (destPageIdx !== -1) {
-          type = 5; // Page Navigation / Jump
-          key = destPageIdx;
+    } else if (action.type === 'open_folder') {
+      if (action.folderId === 'root') {
+        const folders = config.folders || [];
+        const allFolderPageIds = folders.flatMap(f => f.pageIds);
+        const rootPages = config.pages.filter(p => !allFolderPageIds.includes(p.id));
+        let rootPageIdx = 0;
+        if (rootPages.length > 0) {
+          rootPageIdx = config.pages.findIndex(p => p.id === rootPages[0].id);
+          if (rootPageIdx === -1) rootPageIdx = 0;
+        }
+        type = 5;
+        key = rootPageIdx;
+      } else if (action.folderId) {
+        const folders = config.folders || [];
+        const folder = folders.find(f => f.id === action.folderId);
+        if (folder && folder.pageIds.length > 0) {
+          const destPageId = folder.pageIds[0];
+          const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
+          if (destPageIdx !== -1) {
+            type = 5; // Page Navigation / Jump
+            key = destPageIdx;
+          }
         }
       }
     } else if (action.type === 'sequence' && action.sequence) {
@@ -160,7 +173,7 @@ export async function syncConfigViaWiFi(
       if (!btn) continue;
       
       const isBackButton = backButtonIdx === b;
-      const action = isBackButton ? { type: 'none' } as ButtonAction : btn.action;
+      const action = isBackButton ? { type: 'open_folder', folderId: 'root' } as ButtonAction : btn.action;
       if (action) {
         await sendAction(b, p, action);
       }
@@ -280,15 +293,28 @@ export async function syncConfigToDevice(
           key = 5;
           v1 = action.mouse.amount || 0;
         }
-      } else if (action.type === 'open_folder' && action.folderId) {
-        const folders = config.folders || [];
-        const folder = folders.find(f => f.id === action.folderId);
-        if (folder && folder.pageIds.length > 0) {
-          const destPageId = folder.pageIds[0];
-          const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
-          if (destPageIdx !== -1) {
-            type = 5; // Page Navigation / Jump
-            key = destPageIdx;
+      } else if (action.type === 'open_folder') {
+        if (action.folderId === 'root') {
+          const folders = config.folders || [];
+          const allFolderPageIds = folders.flatMap(f => f.pageIds);
+          const rootPages = config.pages.filter(p => !allFolderPageIds.includes(p.id));
+          let rootPageIdx = 0;
+          if (rootPages.length > 0) {
+            rootPageIdx = config.pages.findIndex(p => p.id === rootPages[0].id);
+            if (rootPageIdx === -1) rootPageIdx = 0;
+          }
+          type = 5;
+          key = rootPageIdx;
+        } else if (action.folderId) {
+          const folders = config.folders || [];
+          const folder = folders.find(f => f.id === action.folderId);
+          if (folder && folder.pageIds.length > 0) {
+            const destPageId = folder.pageIds[0];
+            const destPageIdx = config.pages.findIndex(p => p.id === destPageId);
+            if (destPageIdx !== -1) {
+              type = 5; // Page Navigation / Jump
+              key = destPageIdx;
+            }
           }
         }
       } else if (action.type === 'sequence' && action.sequence) {
@@ -361,7 +387,7 @@ export async function syncConfigToDevice(
         if (!btn) continue;
         
         const isBackButton = backButtonIdx === b;
-        const action = isBackButton ? { type: 'none' } as ButtonAction : btn.action;
+        const action = isBackButton ? { type: 'open_folder', folderId: 'root' } as ButtonAction : btn.action;
         if (action) {
           await sendAction(b, p, action);
         }
