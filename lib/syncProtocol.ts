@@ -1,5 +1,6 @@
 import { DanjosDeckConfig, ButtonAction } from './types';
 import { getKeyCode, getKeyName } from './keyMap';
+import { generateIconBitmap } from './imageConverter';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -135,20 +136,40 @@ export async function syncConfigViaWiFi(
 
   for (let p = 0; p < config.pages.length; p++) {
     const page = config.pages[p];
+    
+    // Check if page belongs to any folder
+    const folders = config.folders || [];
+    const parentFolder = folders.find(f => f.pageIds.includes(page.id));
+    const backButtonIdx = parentFolder 
+      ? (parentFolder.backButtonPos === 'btn-1' ? 0 : parentFolder.backButtonPos === 'btn-6' ? 5 : undefined)
+      : undefined;
+
     for (let b = 0; b < 6; b++) {
       const btn = page.buttons[b];
       if (!btn) continue;
       
-      const action = btn.action;
+      const isBackButton = backButtonIdx === b;
+      const action = isBackButton ? { type: 'none' } as ButtonAction : btn.action;
       if (action) {
         await sendAction(b, p, action);
       }
 
       // Send bitmap
-      if (btn.bitmap && btn.bitmap.length === 1024) {
+      let bitmap = btn.bitmap;
+      if (isBackButton) {
+        bitmap = await generateIconBitmap({
+          iconName: 'arrow_back',
+          label: 'BACK',
+          iconSize: 24,
+          layout: 'icon-text-below',
+          showBorder: true
+        });
+      }
+
+      if (bitmap && bitmap.length === 1024) {
         onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);
         
-        const bytes = new Uint8Array(btn.bitmap);
+        const bytes = new Uint8Array(bitmap);
         await uploadFile(`b_${b}_${p}.bin`, bytes);
       }
       processedButtons++;
@@ -306,20 +327,39 @@ export async function syncConfigToDevice(
 
     for (let p = 0; p < config.pages.length; p++) {
       const page = config.pages[p];
+      
+      const folders = config.folders || [];
+      const parentFolder = folders.find(f => f.pageIds.includes(page.id));
+      const backButtonIdx = parentFolder 
+        ? (parentFolder.backButtonPos === 'btn-1' ? 0 : parentFolder.backButtonPos === 'btn-6' ? 5 : undefined)
+        : undefined;
+
       for (let b = 0; b < 6; b++) {
         const btn = page.buttons[b];
         if (!btn) continue;
         
-        const action = btn.action;
+        const isBackButton = backButtonIdx === b;
+        const action = isBackButton ? { type: 'none' } as ButtonAction : btn.action;
         if (action) {
           await sendAction(b, p, action);
         }
 
         // Send bitmap
-        if (btn.bitmap && btn.bitmap.length === 1024) {
+        let bitmap = btn.bitmap;
+        if (isBackButton) {
+          bitmap = await generateIconBitmap({
+            iconName: 'arrow_back',
+            label: 'BACK',
+            iconSize: 24,
+            layout: 'icon-text-below',
+            showBorder: true
+          });
+        }
+
+        if (bitmap && bitmap.length === 1024) {
           onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);
           
-          const bytes = new Uint8Array(btn.bitmap);
+          const bytes = new Uint8Array(bitmap);
 
           await writeText(`BITMAP ${b} ${p}`);
           await waitForResponse('READY', 2000);

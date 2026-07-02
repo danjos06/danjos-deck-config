@@ -13,12 +13,14 @@ interface ButtonCardProps {
   isSelected?: boolean;
   onSelect?: () => void;
   t: any;
+  isBackButton?: boolean;
 }
 
-export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t }: ButtonCardProps) {
+export default function ButtonCard({ button, index, onUpdate, isSelected, onSelect, t, isBackButton }: ButtonCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isBackButton) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -38,13 +40,22 @@ export default function ButtonCard({ button, index, onUpdate, isSelected, onSele
   return (
     <div 
       className={`w-24 h-24 rounded-2xl overflow-hidden flex flex-col transition-all cursor-pointer relative group ${
-        isSelected ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#1e1e1e]' : 'border border-[#3d3d3d] hover:border-gray-500'
+        isBackButton 
+          ? 'border-2 border-dashed border-blue-500/50 bg-blue-950/20 hover:bg-blue-950/35 hover:border-blue-400' 
+          : isSelected 
+            ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#1e1e1e]' 
+            : 'border border-[#3d3d3d] hover:border-gray-500'
       }`}
       onClick={onSelect}
     >
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center bg-[#1a1a1a] relative">
-        {button.bitmap && button.bitmap.some(b => b !== 0) ? (
+        {isBackButton ? (
+          <div className="flex flex-col items-center justify-center p-2 text-blue-400">
+            <span className="material-symbols-rounded text-2xl mb-1">arrow_back</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">{button.label || (t.back || 'Back')}</span>
+          </div>
+        ) : button.bitmap && button.bitmap.some(b => b !== 0) ? (
           <BitmapCanvas bitmap={button.bitmap} width={128} height={64} className="w-full h-full object-contain p-2" />
         ) : (
           <div className="text-center p-2">
@@ -52,19 +63,21 @@ export default function ButtonCard({ button, index, onUpdate, isSelected, onSele
           </div>
         )}
         
-        {/* Overlay upload button */}
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-            className="bg-[#2d2d2d] hover:bg-[#3d3d3d] text-white p-2 rounded-full shadow-lg border border-[#3d3d3d] transition-colors"
-            title={t.uploadImage}
-          >
-            <Camera size={16} />
-          </button>
-        </div>
+        {/* Overlay upload button (disabled if back button) */}
+        {!isBackButton && (
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="bg-[#2d2d2d] hover:bg-[#3d3d3d] text-white p-2 rounded-full shadow-lg border border-[#3d3d3d] transition-colors"
+              title={t.uploadImage}
+            >
+              <Camera size={16} />
+            </button>
+          </div>
+        )}
         <input 
           type="file" 
           ref={fileInputRef} 

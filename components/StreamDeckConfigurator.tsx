@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DanjosDeckConfig, PageConfig, ButtonState } from '../lib/types';
+import { DanjosDeckConfig, PageConfig, ButtonState, FolderConfig } from '../lib/types';
 import { loadConfig, saveConfig } from '../lib/storage';
 import { generateDefaultBitmap, generateIconBitmap } from '../lib/imageConverter';
 import ButtonGrid from './ButtonGrid';
@@ -26,6 +26,7 @@ const DEFAULT_PINS = {
 
 const DEFAULT_CONFIG: DanjosDeckConfig = {
   pages: [],
+  folders: [],
   encoder1: {
     cwAction: { type: 'consumer', consumer: 'VOLUME_INCREMENT' },
     ccwAction: { type: 'consumer', consumer: 'VOLUME_DECREMENT' },
@@ -69,6 +70,7 @@ const POPULAR_ICONS = [
 export default function StreamDeckConfigurator() {
   const [config, setConfig] = useState<DanjosDeckConfig | null>(null);
   const [selectedPageIdx, setSelectedPageIdx] = useState(0);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedButtonIdx, setSelectedButtonIdx] = useState<number | undefined>(undefined);
   const [lang, setLang] = useState<Language>('en');
   const [activeTab, setActiveTab] = useState<'config' | 'sync' | 'pins' | 'docs'>('config');
@@ -90,6 +92,152 @@ export default function StreamDeckConfigurator() {
   const [ipAddress, setIpAddressState] = useState('');
   const [isQuickSyncing, setIsQuickSyncing] = useState(false);
   const [quickSyncMethod, setQuickSyncMethod] = useState<'wifi' | 'usb' | null>(null);
+
+  // Folder helper functions
+  const getFilteredPages = () => {
+    if (!config) return [];
+    const folders = config.folders || [];
+    if (activeFolderId) {
+      const activeFolder = folders.find(f => f.id === activeFolderId);
+      if (!activeFolder) return [];
+      return config.pages.filter(p => activeFolder.pageIds.includes(p.id));
+    } else {
+      const allFolderPageIds = folders.flatMap(f => f.pageIds);
+      return config.pages.filter(p => !allFolderPageIds.includes(p.id));
+    }
+  };
+
+  const selectFolder = (folderId: string | null) => {
+    setActiveFolderId(folderId);
+    setSelectedButtonIdx(undefined);
+    if (!config) return;
+    const folders = config.folders || [];
+    if (folderId) {
+      const folder = folders.find(f => f.id === folderId);
+      if (folder && folder.pageIds.length > 0) {
+        const firstPageIdx = config.pages.findIndex(p => p.id === folder.pageIds[0]);
+        if (firstPageIdx !== -1) {
+          setSelectedPageIdx(firstPageIdx);
+          return;
+        }
+      }
+    } else {
+      const allFolderPageIds = folders.flatMap(f => f.pageIds);
+      const rootPages = config.pages.filter(p => !allFolderPageIds.includes(p.id));
+      if (rootPages.length > 0) {
+        const firstPageIdx = config.pages.findIndex(p => p.id === rootPages[0].id);
+        if (firstPageIdx !== -1) {
+          setSelectedPageIdx(firstPageIdx);
+        }
+      }
+    }
+  };
+
+  const handleAddFolder = () => {
+    if (!config) return;
+    const folderNamePrompt = lang === 'pt' ? 'Digite o nome da nova pasta:' : 'Enter the name of the new folder:';
+    const name = prompt(folderNamePrompt, lang === 'pt' ? 'Nova Pasta' : 'New Folder');
+    if (!name || !name.trim()) return;
+
+    const folders = config.folders || [];
+    const newFolderId = `f_${Date.now()}`;
+    const newPageId = `p_${Date.now()}`;
+    const defaultBitmap = generateDefaultBitmap();
+
+    const newPage: PageConfig = {
+      id: newPageId,
+      name: `${t.page} 1`,
+      buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: defaultBitmap, action: { type: 'none' } }))
+    };
+
+    const newFolder: FolderConfig = {
+      id: newFolderId,
+      name: name.trim(),
+      pageIds: [newPageId],
+      showNameAt: 'center',
+      backButtonPos: 'header'
+    };
+
+    const nextConfig = {
+      ...config,
+      pages: [...config.pages, newPage],
+      folders: [...folders, newFolder]
+    };
+
+    handleUpdateConfig(nextConfig);
+    setActiveFolderId(newFolderId);
+    setSelectedPageIdx(nextConfig.pages.length - 1);
+    setSelectedButtonIdx(undefined);
+    showToast(lang === 'pt' ? 'Pasta criada!' : 'Folder created!');
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    if (!config) return;
+    const folders = config.folders || [];
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const confirmMsg = lang === 'pt' 
+      ? `Tem certeza que deseja excluir a pasta "${folder.name}"? As páginas continuarão disponíveis na raiz.`
+      : `Are you sure you want to delete the folder "${folder.name}"? The pages will remain available at the root level.`;
+    
+    if (window.confirm(confirmMsg)) {
+      const nextFolders = folders.filter(f => f.id !== folderId);
+      const nextConfig = {
+        ...config,
+        folders: nextFolders
+      };
+      
+      handleUpdateConfig(nextConfig);
+      setActiveFolderId(null);
+      
+      const remainingRootPages = nextConfig.pages.filter(p => !nextFolders.flatMap(f => f.pageIds).includes(p.id));
+      if (remainingRootPages.length > 0) {
+        setSelectedPageIdx(nextConfig.pages.findIndex(p => p.id === remainingRootPages[0].id));
+      } else {
+        setSelectedPageIdx(0);
+      }
+      setSelectedButtonIdx(undefined);
+      showToast(lang === 'pt' ? 'Pasta removida!' : 'Folder removed!');
+    }
+  };
+
+  const handleUpdateFolder = (folderId: string, updates: Partial<FolderConfig>) => {
+    if (!config) return;
+    const folders = config.folders || [];
+    const nextFolders = folders.map(f => f.id === folderId ? { ...f, ...updates } : f);
+    handleUpdateConfig({
+      ...config,
+      folders: nextFolders
+    });
+  };
+
+  const getBackButtonIdx = () => {
+    if (!activeFolderId || !config) return undefined;
+    const activeFolder = (config.folders || []).find(f => f.id === activeFolderId);
+    if (!activeFolder) return undefined;
+    if (activeFolder.backButtonPos === 'btn-1') return 0;
+    if (activeFolder.backButtonPos === 'btn-6') return 5;
+    return undefined;
+  };
+
+  // Synchronize activeFolderId when selectedPageIdx changes
+  useEffect(() => {
+    if (config && selectedPageIdx !== undefined && config.pages[selectedPageIdx]) {
+      const pageId = config.pages[selectedPageIdx].id;
+      const folders = config.folders || [];
+      const parentFolder = folders.find(f => f.pageIds.includes(pageId));
+      if (parentFolder) {
+        if (activeFolderId !== parentFolder.id) {
+          setActiveFolderId(parentFolder.id);
+        }
+      } else {
+        if (activeFolderId !== null) {
+          setActiveFolderId(null);
+        }
+      }
+    }
+  }, [selectedPageIdx, config]);
 
   const updateButtonDesign = async (updates: Partial<ButtonState>) => {
     if (!config || selectedButtonIdx === undefined) return;
@@ -161,6 +309,9 @@ export default function StreamDeckConfigurator() {
           loaded.encoder1 = (loaded as any).encoder || DEFAULT_CONFIG.encoder1;
           loaded.encoder2 = DEFAULT_CONFIG.encoder2;
           loaded.pins = DEFAULT_CONFIG.pins;
+        }
+        if (!loaded.folders) {
+          loaded.folders = [];
         }
         setConfig(loaded);
       } else {
@@ -383,7 +534,57 @@ export default function StreamDeckConfigurator() {
                     </div>
                   </div>
 
-                  <ButtonGrid page={config.pages[selectedPageIdx]} onUpdatePage={handleUpdatePage} selectedButtonIdx={selectedButtonIdx} onSelectButton={setSelectedButtonIdx} t={t} />
+                  {/* Device Screen Frame with Folder Title */}
+                  <div className="flex flex-col bg-[#111] p-4 rounded-3xl border-4 border-[#2d2d2d] shadow-2xl relative min-w-[340px]">
+                    {(() => {
+                      const activeFolder = (config.folders || []).find(f => f.id === activeFolderId);
+                      if (activeFolder && activeFolder.showNameAt !== 'none') {
+                        return (
+                          <div className={`w-full text-xs font-bold font-mono py-1 px-1 mb-3 flex items-center border-b border-[#2d2d2d] text-blue-400 select-none
+                            ${activeFolder.showNameAt === 'center' ? 'justify-between' : activeFolder.showNameAt === 'right' ? 'justify-between flex-row-reverse' : 'justify-between'}`}
+                          >
+                            <div className="flex items-center space-x-1.5">
+                              <span className="material-symbols-rounded text-sm">folder</span>
+                              <span className="truncate max-w-[150px]">{activeFolder.name}</span>
+                            </div>
+                            {activeFolder.backButtonPos === 'header' && (
+                              <button 
+                                onClick={() => selectFolder(null)} 
+                                className="px-1.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-[9px] text-white flex items-center space-x-1 transition-all"
+                                title={t.backToRoot}
+                              >
+                                <span className="material-symbols-rounded text-[10px]">arrow_back</span>
+                                <span>{lang === 'pt' ? 'Voltar' : 'Back'}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      } else if (activeFolder && activeFolder.showNameAt === 'none' && activeFolder.backButtonPos === 'header') {
+                        return (
+                          <div className="w-full py-1 mb-3 flex items-center justify-start border-b border-[#2d2d2d]">
+                            <button 
+                              onClick={() => selectFolder(null)} 
+                              className="px-1.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-[9px] text-white flex items-center space-x-1 transition-all"
+                            >
+                              <span className="material-symbols-rounded text-[10px]">arrow_back</span>
+                              <span>{lang === 'pt' ? 'Voltar' : 'Back'}</span>
+                            </button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <ButtonGrid 
+                      page={config.pages[selectedPageIdx]} 
+                      onUpdatePage={handleUpdatePage} 
+                      selectedButtonIdx={selectedButtonIdx} 
+                      onSelectButton={setSelectedButtonIdx} 
+                      t={t} 
+                      backButtonIdx={getBackButtonIdx()}
+                      onBackClick={() => selectFolder(null)}
+                    />
+                  </div>
 
                   <div className="flex flex-col items-center space-y-4">
                     <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{t.encoderR}</p>
@@ -397,33 +598,117 @@ export default function StreamDeckConfigurator() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between w-full max-w-2xl mt-8 px-8 mb-4" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setSelectedPageIdx((selectedPageIdx - 1 + config.pages.length) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronLeft size={28} /></button>
+                {/* Folders Navigation Bar */}
+                <div className="flex items-center space-x-2 bg-black/30 px-4 py-2 rounded-xl border border-[#2d2d2d] mt-8 mb-2 max-w-2xl w-full justify-center select-none" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => selectFolder(null)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                      activeFolderId === null 
+                        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-[#252525]'
+                    }`}
+                  >
+                    <span className="material-symbols-rounded text-sm">home</span>
+                    <span>{lang === 'pt' ? 'Páginas Principais' : 'Main Pages'}</span>
+                  </button>
+
+                  {(config.folders || []).map(folder => (
+                    <button
+                      key={folder.id}
+                      onClick={() => selectFolder(folder.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                        activeFolderId === folder.id 
+                          ? 'bg-blue-600 text-white shadow-lg' 
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-[#252525]'
+                      }`}
+                    >
+                      <span className="material-symbols-rounded text-sm">folder</span>
+                      <span>{folder.name}</span>
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={handleAddFolder}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-white hover:bg-[#252525] transition-all flex items-center space-x-1.5 border border-dashed border-[#3d3d3d] hover:border-gray-500"
+                    title={t.addFolder}
+                  >
+                    <span className="material-symbols-rounded text-sm">create_new_folder</span>
+                    <span>{t.addFolder}</span>
+                  </button>
+                </div>
+
+                {/* Pages Navigation Bar */}
+                <div className="flex items-center justify-between w-full max-w-2xl px-8 mb-4" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={() => {
+                      const filtered = getFilteredPages();
+                      if (filtered.length === 0) return;
+                      const currentFilteredIdx = filtered.findIndex(p => p.id === config.pages[selectedPageIdx]?.id);
+                      const prevFilteredIdx = (currentFilteredIdx - 1 + filtered.length) % filtered.length;
+                      const realIdx = config.pages.findIndex(p => p.id === filtered[prevFilteredIdx].id);
+                      setSelectedPageIdx(realIdx);
+                    }} 
+                    className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"
+                  >
+                    <ChevronLeft size={28} />
+                  </button>
+                  
                   <div className="flex items-center space-x-3 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner">
-                    {config.pages.map((p, i) => (
-                      <button 
-                        key={p.id} 
-                        onClick={() => setSelectedPageIdx(i)} 
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: i });
-                        }}
-                        className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${selectedPageIdx === i ? 'bg-blue-600 text-white shadow-lg scale-110' : 'text-gray-500 hover:text-gray-300'}`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
+                    {getFilteredPages().map((p, i) => {
+                      const realIndex = config.pages.findIndex(page => page.id === p.id);
+                      return (
+                        <button 
+                          key={p.id} 
+                          onClick={() => setSelectedPageIdx(realIndex)} 
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: realIndex });
+                          }}
+                          className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${selectedPageIdx === realIndex ? 'bg-blue-600 text-white shadow-lg scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    })}
                     <button onClick={() => {
-                      if (config.pages.length < 8) {
+                      if (config.pages.length < 12) { // Allow up to 12 pages now
                         const newC = { ...config };
                         const bm = generateDefaultBitmap();
-                        newC.pages.push({ id: `p${Date.now()}`, name: `${t.page} ${config.pages.length + 1}`, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) });
+                        const newPageId = `p${Date.now()}`;
+                        const newPageName = `${t.page} ${config.pages.length + 1}`;
+                        const newPage: PageConfig = { id: newPageId, name: newPageName, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) };
+                        
+                        newC.pages.push(newPage);
+                        
+                        // If inside folder, add to the active folder!
+                        if (activeFolderId) {
+                          newC.folders = (newC.folders || []).map(f => {
+                            if (f.id === activeFolderId) {
+                              return { ...f, pageIds: [...f.pageIds, newPageId] };
+                            }
+                            return f;
+                          });
+                        }
+                        
                         handleUpdateConfig(newC);
                         setSelectedPageIdx(newC.pages.length - 1);
                       }
                     }} className="w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-[#3d3d3d] flex items-center justify-center"><Plus size={18} /></button>
                   </div>
-                  <button onClick={() => setSelectedPageIdx((selectedPageIdx + 1) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronRight size={28} /></button>
+
+                  <button 
+                    onClick={() => {
+                      const filtered = getFilteredPages();
+                      if (filtered.length === 0) return;
+                      const currentFilteredIdx = filtered.findIndex(p => p.id === config.pages[selectedPageIdx]?.id);
+                      const nextFilteredIdx = (currentFilteredIdx + 1) % filtered.length;
+                      const realIdx = config.pages.findIndex(p => p.id === filtered[nextFilteredIdx].id);
+                      setSelectedPageIdx(realIdx);
+                    }} 
+                    className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"
+                  >
+                    <ChevronRight size={28} />
+                  </button>
                 </div>
               </div>
 
@@ -732,6 +1017,96 @@ export default function StreamDeckConfigurator() {
                       </div>
                     )}
                   </div>
+                ) : activeFolderId ? (
+                  <div className="flex flex-col h-full max-w-4xl mx-auto w-full overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#2d2d2d] flex-shrink-0">
+                      <div className="flex items-center space-x-3 text-blue-400">
+                        <span className="material-symbols-rounded">folder</span>
+                        <h3 className="text-sm font-bold tracking-wider uppercase">
+                          {t.folderSettings}
+                        </h3>
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleDeleteFolder(activeFolderId)}
+                        className="px-3 py-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-600/30 rounded text-xs font-bold transition-all uppercase tracking-wider"
+                      >
+                        {t.deleteFolder}
+                      </button>
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-2 gap-8 overflow-y-auto pr-2 py-1">
+                      {/* Left Column: General & Name Settings */}
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">{t.folderName}</label>
+                          <input 
+                            type="text" 
+                            value={(config.folders || []).find(f => f.id === activeFolderId)?.name || ''} 
+                            onChange={(e) => handleUpdateFolder(activeFolderId, { name: e.target.value })}
+                            className="w-full bg-[#111] border border-[#2d2d2d] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">{t.showFolderName}</label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {(['left', 'center', 'right', 'none'] as const).map((pos) => {
+                              const activeFolder = (config.folders || []).find(f => f.id === activeFolderId);
+                              const isSel = (activeFolder?.showNameAt || 'center') === pos;
+                              return (
+                                <button
+                                  key={pos}
+                                  onClick={() => handleUpdateFolder(activeFolderId, { showNameAt: pos })}
+                                  className={`py-2 rounded text-xs font-bold uppercase transition-all ${
+                                    isSel ? 'bg-blue-600 text-white shadow shadow-blue-500/20' : 'bg-[#111] border border-[#2d2d2d] text-gray-400 hover:text-white'
+                                  }`}
+                                >
+                                  {pos === 'left' ? t.posLeft : pos === 'center' ? t.posCenter : pos === 'right' ? t.posRight : t.posNone}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Return / Back Button Settings */}
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">{t.backButtonPos}</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(['header', 'btn-1', 'btn-6', 'manual'] as const).map((pos) => {
+                              const activeFolder = (config.folders || []).find(f => f.id === activeFolderId);
+                              const isSel = (activeFolder?.backButtonPos || 'header') === pos;
+                              return (
+                                <button
+                                  key={pos}
+                                  onClick={() => handleUpdateFolder(activeFolderId, { backButtonPos: pos })}
+                                  className={`py-2.5 px-3 rounded text-xs font-bold transition-all text-left flex items-center space-x-2 border ${
+                                    isSel 
+                                      ? 'bg-blue-600 border-blue-500 text-white shadow shadow-blue-500/20' 
+                                      : 'bg-[#111] border-[#2d2d2d] text-gray-400 hover:text-white'
+                                  }`}
+                                >
+                                  <span className="material-symbols-rounded text-sm">
+                                    {pos === 'header' ? 'tab_unselected' : pos === 'btn-1' ? 'looks_one' : pos === 'btn-6' ? 'looks_6' : 'backspace'}
+                                  </span>
+                                  <span className="truncate">
+                                    {pos === 'header' ? t.header : pos === 'btn-1' ? t.btn1 : pos === 'btn-6' ? t.btn6 : t.manual}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+                            {lang === 'pt' 
+                              ? 'Selecione onde colocar o controle de voltar. Se escolher Botão 1 ou 6, esse botão da tela ficará reservado para voltar e não poderá executar outras ações.'
+                              : 'Select where to place the back control. Selecting Button 1 or 6 will reserve that button exclusively for returning and disable custom actions.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-600 font-mono italic text-sm">{t.selectKey}</div>
                 )}
@@ -769,7 +1144,7 @@ export default function StreamDeckConfigurator() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setPageContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setPageContextMenu(null); }} />
           <div 
-            className="fixed z-50 bg-[#2d2d2d] border border-[#3d3d3d] rounded-lg shadow-2xl py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 bg-[#2d2d2d] border border-[#3d3d3d] rounded-lg shadow-2xl py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
             style={{ top: pageContextMenu.y, left: pageContextMenu.x }}
           >
             <button 
@@ -794,6 +1169,68 @@ export default function StreamDeckConfigurator() {
                 <span>{t.deletePage}</span>
               </button>
             )}
+
+            {/* Move to Folder */}
+            <div className="border-t border-[#3d3d3d] px-4 py-1.5 text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+              {t.moveToFolder || 'Move to folder'}
+            </div>
+            
+            {/* Main/Root Pages option */}
+            <button
+              onClick={() => {
+                const pageId = config.pages[pageContextMenu.pageIdx].id;
+                const nextFolders = (config.folders || []).map(f => ({
+                  ...f,
+                  pageIds: f.pageIds.filter(id => id !== pageId)
+                }));
+                handleUpdateConfig({
+                  ...config,
+                  folders: nextFolders
+                });
+                setPageContextMenu(null);
+                showToast(lang === 'pt' ? 'Página movida para a raiz!' : 'Page moved to root!');
+              }}
+              className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-blue-600 hover:text-white flex items-center space-x-2"
+            >
+              <span className="material-symbols-rounded text-sm">home</span>
+              <span>{lang === 'pt' ? 'Raiz (Principal)' : 'Root (Main)'}</span>
+            </button>
+
+            {/* List folders */}
+            {(config.folders || []).map(folder => {
+              const pageId = config.pages[pageContextMenu.pageIdx].id;
+              const isAlreadyIn = folder.pageIds.includes(pageId);
+              if (isAlreadyIn) return null; // Don't show if already in
+              
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => {
+                    // Remove from any other folder first
+                    let nextFolders = (config.folders || []).map(f => ({
+                      ...f,
+                      pageIds: f.pageIds.filter(id => id !== pageId)
+                    }));
+                    // Add to this folder
+                    nextFolders = nextFolders.map(f => f.id === folder.id ? {
+                      ...f,
+                      pageIds: [...f.pageIds, pageId]
+                    } : f);
+                    
+                    handleUpdateConfig({
+                      ...config,
+                      folders: nextFolders
+                    });
+                    setPageContextMenu(null);
+                    showToast((lang === 'pt' ? 'Página movida para ' : 'Page moved to ') + folder.name);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-blue-600 hover:text-white flex items-center space-x-2"
+                >
+                  <span className="material-symbols-rounded text-sm">folder</span>
+                  <span>{folder.name}</span>
+                </button>
+              );
+            })}
           </div>
         </>
       )}

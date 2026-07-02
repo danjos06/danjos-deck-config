@@ -113,8 +113,17 @@ export interface PageConfig {
   buttons: ButtonState[]; // exactly 6 buttons per page
 }
 
+export interface FolderConfig {
+  id: string;
+  name: string;
+  pageIds: string[]; // references to PageConfig IDs
+  showNameAt: 'left' | 'center' | 'right' | 'none';
+  backButtonPos: 'header' | 'btn-1' | 'btn-6' | 'manual';
+}
+
 export interface DanjosDeckConfig {
   pages: PageConfig[];
+  folders?: FolderConfig[];
   encoder1: EncoderConfig;
   encoder2: EncoderConfig;
   pins: PinConfig;
