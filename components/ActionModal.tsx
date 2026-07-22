@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { DanjosDeckConfig, ButtonAction, ActionType, ConsumerAction, KeyModifiers, SequenceStep } from '../lib/types';
-import { X, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { DanjosDeckConfig, ButtonAction, ActionType, ConsumerAction, KeyModifiers, SequenceStep, FolderAction } from '../lib/types';
+import { X, Plus, Trash2, ArrowUp, ArrowDown, Folder, ArrowLeft } from 'lucide-react';
 import { translations, Language } from '../lib/i18n';
 
 interface ActionModalProps {
@@ -39,6 +39,7 @@ const COMMON_KEYS = (t: any): { group: string; keys: string[] }[] => [
 
 export default function ActionModal({ isOpen, onClose, config, pageIndex, buttonIndex, encoderTarget, onSave, lang }: ActionModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [workingConfig, setWorkingConfig] = useState<DanjosDeckConfig>(config);
   const [action, setAction] = useState<ButtonAction>({ type: 'none' });
 
   useEffect(() => {
@@ -52,19 +53,22 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
     if (!isOpen) return;
 
     const timer = setTimeout(() => {
+      const cloned = JSON.parse(JSON.stringify(config)) as DanjosDeckConfig;
+      setWorkingConfig(cloned);
+
       if (encoderTarget) {
         const encoderMap: Record<string, ButtonAction> = {
-          cw1: config.encoder1.cwAction,
-          ccw1: config.encoder1.ccwAction,
-          btn1: config.encoder1.btnAction,
-          cw2: config.encoder2.cwAction,
-          ccw2: config.encoder2.ccwAction,
-          btn2: config.encoder2.btnAction,
+          cw1: cloned.encoder1.cwAction,
+          ccw1: cloned.encoder1.ccwAction,
+          btn1: cloned.encoder1.btnAction,
+          cw2: cloned.encoder2.cwAction,
+          ccw2: cloned.encoder2.ccwAction,
+          btn2: cloned.encoder2.btnAction,
         };
         const targetAction = encoderMap[encoderTarget];
         if (targetAction) setAction({ ...targetAction });
       } else if (buttonIndex !== undefined) {
-        const btnAction = config.pages[pageIndex]?.buttons[buttonIndex]?.action;
+        const btnAction = cloned.pages[pageIndex]?.buttons[buttonIndex]?.action;
         setAction(btnAction ? JSON.parse(JSON.stringify(btnAction)) : { type: 'none' });
       }
     }, 0);
@@ -73,12 +77,12 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
 
   if (!isOpen || !mounted) return null;
 
-    const t = translations[lang];
-    const consumerActions = CONSUMER_ACTIONS(t);
-    const commonKeys = COMMON_KEYS(t);
+  const t = translations[lang];
+  const consumerActions = CONSUMER_ACTIONS(t);
+  const commonKeys = COMMON_KEYS(t);
 
   const handleSave = () => {
-    const newConfig = JSON.parse(JSON.stringify(config)) as DanjosDeckConfig;
+    const newConfig = JSON.parse(JSON.stringify(workingConfig)) as DanjosDeckConfig;
     if (encoderTarget) {
       if (encoderTarget === 'cw1') newConfig.encoder1.cwAction = action;
       else if (encoderTarget === 'ccw1') newConfig.encoder1.ccwAction = action;
@@ -87,7 +91,28 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
       else if (encoderTarget === 'ccw2') newConfig.encoder2.ccwAction = action;
       else if (encoderTarget === 'btn2') newConfig.encoder2.btnAction = action;
     } else if (buttonIndex !== undefined) {
-      newConfig.pages[pageIndex].buttons[buttonIndex].action = action;
+      const btn = newConfig.pages[pageIndex]?.buttons[buttonIndex];
+      if (btn) {
+        btn.action = action;
+        if (action.type === 'folder') {
+          const targetPage = newConfig.pages.find(p => p.id === action.folder?.targetPageId);
+          if (!btn.label || btn.label.trim() === '') {
+            btn.label = targetPage ? targetPage.name : t.folder;
+          }
+          if (!btn.iconName) {
+            btn.iconName = 'folder';
+            btn.iconLayout = btn.iconLayout || 'icon-text-below';
+          }
+        } else if (action.type === 'back') {
+          if (!btn.label || btn.label.trim() === '') {
+            btn.label = t.back;
+          }
+          if (!btn.iconName) {
+            btn.iconName = 'arrow_back';
+            btn.iconLayout = btn.iconLayout || 'icon-text-below';
+          }
+        }
+      }
     }
     onSave(newConfig);
     onClose();
@@ -107,8 +132,54 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
       newAction.cpp = { code: 'Keyboard.print("Hello World!");' };
     } else if (type === 'sequence') {
       newAction.sequence = [];
+    } else if (type === 'folder') {
+      const firstTarget = workingConfig.pages.find((_, idx) => idx !== pageIndex) || workingConfig.pages[0];
+      const targetIdx = workingConfig.pages.findIndex(p => p.id === firstTarget?.id);
+      newAction.folder = { targetPageId: firstTarget?.id, targetPageIndex: targetIdx >= 0 ? targetIdx : 0 };
+    } else if (type === 'back') {
+      newAction.folder = { targetPageId: 'back' };
     }
     setAction(newAction);
+  };
+
+  const handleCreateSubFolder = () => {
+    const newConfig = JSON.parse(JSON.stringify(workingConfig)) as DanjosDeckConfig;
+    const folderNum = newConfig.pages.length + 1;
+    const newPageId = `folder-${Date.now()}`;
+    const newPageName = `${t.folder} ${folderNum}`;
+
+    const defaultButtons = Array(6).fill(null).map((_, idx) => {
+      if (idx === 0) {
+        return {
+          label: t.back,
+          iconName: 'arrow_back',
+          iconLayout: 'icon-text-below',
+          showBorder: true,
+          bitmap: Array(1024).fill(0),
+          action: { type: 'back', folder: { targetPageId: 'back' } }
+        };
+      }
+      return {
+        label: '',
+        bitmap: Array(1024).fill(0),
+        action: { type: 'none' }
+      };
+    });
+
+    newConfig.pages.push({
+      id: newPageId,
+      name: newPageName,
+      parentId: workingConfig.pages[pageIndex]?.id,
+      isFolder: true,
+      buttons: defaultButtons as any
+    });
+
+    const newTargetIdx = newConfig.pages.length - 1;
+    setWorkingConfig(newConfig);
+    setAction({
+      type: 'folder',
+      folder: { targetPageId: newPageId, targetPageIndex: newTargetIdx }
+    });
   };
 
   const addStep = () => {
@@ -130,7 +201,7 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-300">{t.actionType}</label>
             <div className="grid grid-cols-2 gap-2">
-              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence'].map((type) => (
+              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence', 'folder', 'back'].map((type) => (
                 <button
                   key={type}
                   onClick={() => updateActionType(type as ActionType)}
@@ -143,6 +214,57 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
               ))}
             </div>
           </div>
+
+          {action.type === 'folder' && (
+            <div className="space-y-4 bg-[#171717] p-4 rounded-lg border border-[#2d2d2d]">
+              <div className="flex items-center space-x-2 text-blue-400">
+                <Folder size={18} />
+                <span className="text-sm font-medium">{t.targetFolder}</span>
+              </div>
+              <p className="text-xs text-gray-400">{t.folderNavHint}</p>
+              
+              <div className="space-y-2">
+                <label className="text-xs text-gray-300">{t.selectFolder}</label>
+                <select
+                  value={action.folder?.targetPageId || ''}
+                  onChange={(e) => {
+                    const targetPageId = e.target.value;
+                    const targetIdx = workingConfig.pages.findIndex(p => p.id === targetPageId);
+                    setAction({
+                      ...action,
+                      folder: { targetPageId, targetPageIndex: targetIdx >= 0 ? targetIdx : 0 }
+                    });
+                  }}
+                  className="w-full bg-[#252525] border border-[#3d3d3d] text-xs text-white p-2.5 rounded focus:outline-none focus:border-blue-500"
+                >
+                  {workingConfig.pages.map((p, idx) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.isFolder ? `(${t.isSubFolder})` : idx === pageIndex ? `(${t.page})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCreateSubFolder}
+                className="w-full mt-2 flex items-center justify-center space-x-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 font-medium py-2 px-3 rounded-lg text-xs transition-colors"
+              >
+                <Plus size={16} />
+                <span>{t.createNewFolder}</span>
+              </button>
+            </div>
+          )}
+
+          {action.type === 'back' && (
+            <div className="space-y-4 bg-[#171717] p-4 rounded-lg border border-[#2d2d2d]">
+              <div className="flex items-center space-x-2 text-amber-400">
+                <ArrowLeft size={18} />
+                <span className="text-sm font-medium">{t.back}</span>
+              </div>
+              <p className="text-xs text-gray-400">{t.backNavHint}</p>
+            </div>
+          )}
 
           {action.type === 'keyboard' && action.keyboard && (
             <div className="space-y-4">

@@ -321,6 +321,20 @@ void executeAction(int b, int p) {
   ${generateEmbeddedActions()}
 
   Action a = actions[b][p];
+  if (a.type == 5) { // Folder navigation
+    if (a.key < totalPages) {
+      currentPage = a.key;
+    } else {
+      currentPage = 0;
+    }
+    updateDisplays();
+    return;
+  } else if (a.type == 6) { // Back action (return to root page 0)
+    currentPage = 0;
+    updateDisplays();
+    return;
+  }
+
   if (a.type == 4) { // Macro
     for (int i = 0; i < macroLen[b][p]; i++) {
       Step s = macros[b][p][i];

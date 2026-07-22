@@ -71,6 +71,14 @@ export async function syncConfigViaWiFi(
         key = 5;
         v1 = action.mouse.amount || 0;
       }
+    } else if (action.type === 'folder') {
+      type = 5;
+      const targetPageId = action.folder?.targetPageId;
+      const targetIdx = config.pages.findIndex(p => p.id === targetPageId);
+      key = targetIdx !== -1 ? targetIdx : (action.folder?.targetPageIndex ?? 0);
+    } else if (action.type === 'back') {
+      type = 6;
+      key = 255;
     } else if (action.type === 'sequence' && action.sequence) {
       type = 4;
       for (let i = 0; i < action.sequence.length; i++) {
@@ -248,6 +256,14 @@ export async function syncConfigToDevice(
           key = 5;
           v1 = action.mouse.amount || 0;
         }
+      } else if (action.type === 'folder') {
+        type = 5;
+        const targetPageId = action.folder?.targetPageId;
+        const targetIdx = config.pages.findIndex(p => p.id === targetPageId);
+        key = targetIdx !== -1 ? targetIdx : (action.folder?.targetPageIndex ?? 0);
+      } else if (action.type === 'back') {
+        type = 6;
+        key = 255;
       } else if (action.type === 'sequence' && action.sequence) {
         type = 4;
         for (let i = 0; i < action.sequence.length; i++) {
@@ -502,6 +518,16 @@ function parseExportedConfig(lines: string[], bitmaps: { b: number, p: number, h
               consumer: consumerName as any
             };
           }
+        } else if (type === 5) {
+          action = {
+            type: 'folder',
+            folder: { targetPageIndex: key }
+          };
+        } else if (type === 6) {
+          action = {
+            type: 'back',
+            folder: { targetPageId: 'back' }
+          };
         }
 
         if (b >= 0 && b < 6 && p >= 0 && p < totalPages) {

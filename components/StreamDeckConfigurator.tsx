@@ -10,7 +10,7 @@ import SerialMonitor from './SerialMonitor';
 import ActionModal from './ActionModal';
 import PinsSettings from './PinsSettings';
 import InstructionsTab from './InstructionsTab';
-import { Settings2, Bell, Settings, User, ChevronLeft, ChevronRight, Trash2, Edit2, Plus, Layout, Cpu, BookOpen, Send, Wifi, Usb, RefreshCw, Sliders, Search } from 'lucide-react';
+import { Settings2, Bell, Settings, User, ChevronLeft, ChevronRight, Trash2, Edit2, Plus, Layout, Cpu, BookOpen, Send, Wifi, Usb, RefreshCw, Sliders, Search, Folder } from 'lucide-react';
 import { useSerial } from '../hooks/useSerial';
 import { syncConfigToDevice, syncConfigViaWiFi } from '../lib/syncProtocol';
 import Image from 'next/image';
@@ -399,7 +399,7 @@ export default function StreamDeckConfigurator() {
 
                 <div className="flex items-center justify-between w-full max-w-2xl mt-8 px-8 mb-4" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setSelectedPageIdx((selectedPageIdx - 1 + config.pages.length) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronLeft size={28} /></button>
-                  <div className="flex items-center space-x-3 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner">
+                  <div className="flex items-center space-x-2 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner max-w-lg overflow-x-auto custom-scrollbar">
                     {config.pages.map((p, i) => (
                       <button 
                         key={p.id} 
@@ -408,20 +408,22 @@ export default function StreamDeckConfigurator() {
                           e.preventDefault();
                           setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: i });
                         }}
-                        className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${selectedPageIdx === i ? 'bg-blue-600 text-white shadow-lg scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 shrink-0 ${selectedPageIdx === i ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-gray-400 hover:text-gray-200 hover:bg-[#222]'}`}
+                        title={p.name}
                       >
-                        {i + 1}
+                        {p.isFolder && <Folder size={12} className="text-blue-300 mr-0.5 shrink-0" />}
+                        <span className="truncate max-w-[90px]">{p.name || `${i + 1}`}</span>
                       </button>
                     ))}
                     <button onClick={() => {
-                      if (config.pages.length < 8) {
+                      if (config.pages.length < 12) {
                         const newC = { ...config };
                         const bm = generateDefaultBitmap();
                         newC.pages.push({ id: `p${Date.now()}`, name: `${t.page} ${config.pages.length + 1}`, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) });
                         handleUpdateConfig(newC);
                         setSelectedPageIdx(newC.pages.length - 1);
                       }
-                    }} className="w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-[#3d3d3d] flex items-center justify-center"><Plus size={18} /></button>
+                    }} className="w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-[#3d3d3d] flex items-center justify-center shrink-0" title={t.addPage}><Plus size={18} /></button>
                   </div>
                   <button onClick={() => setSelectedPageIdx((selectedPageIdx + 1) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronRight size={28} /></button>
                 </div>
@@ -714,6 +716,37 @@ export default function StreamDeckConfigurator() {
                             {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}
                           </div>
                         </div>
+
+                        {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type === 'folder' && (
+                          <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-lg space-y-2">
+                            <p className="text-xs text-blue-300 font-medium flex items-center space-x-1.5">
+                              <Folder size={14} />
+                              <span>
+                                {t.targetFolder}: {' '}
+                                <strong className="text-white">
+                                  {config.pages.find(p => p.id === config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folder?.targetPageId)?.name || `Page ${(config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folder?.targetPageIndex ?? 0) + 1}`}
+                                </strong>
+                              </span>
+                            </p>
+                            <button
+                              onClick={() => {
+                                const targetId = config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folder?.targetPageId;
+                                const targetIdx = config.pages.findIndex(p => p.id === targetId);
+                                if (targetIdx !== -1) {
+                                  setSelectedPageIdx(targetIdx);
+                                  setSelectedButtonIdx(undefined);
+                                } else if (config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.folder?.targetPageIndex !== undefined) {
+                                  setSelectedPageIdx(config.pages[selectedPageIdx].buttons[selectedButtonIdx].action.folder.targetPageIndex);
+                                  setSelectedButtonIdx(undefined);
+                                }
+                              }}
+                              className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition-all flex items-center justify-center space-x-2"
+                            >
+                              <Folder size={14} />
+                              <span>{t.openFolderInEditor}</span>
+                            </button>
+                          </div>
+                        )}
 
                         <div className="flex justify-end space-x-3 pt-2">
                           <button 

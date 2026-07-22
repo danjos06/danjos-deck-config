@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { ButtonState } from '../lib/types';
 import BitmapCanvas from './BitmapCanvas';
 import { imageToBitmap } from '../lib/imageConverter';
-import { Camera } from 'lucide-react';
+import { Camera, Folder, ArrowLeft } from 'lucide-react';
 
 interface ButtonCardProps {
   button: ButtonState;
@@ -44,6 +44,17 @@ export default function ButtonCard({ button, index, onUpdate, isSelected, onSele
     >
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center bg-[#1a1a1a] relative">
+        {button.action?.type === 'folder' && (
+          <div className="absolute top-1 right-1 z-10 bg-blue-600/80 text-white p-1 rounded-full shadow" title={t.folderBadge}>
+            <Folder size={12} />
+          </div>
+        )}
+        {button.action?.type === 'back' && (
+          <div className="absolute top-1 right-1 z-10 bg-amber-600/80 text-white p-1 rounded-full shadow" title={t.back}>
+            <ArrowLeft size={12} />
+          </div>
+        )}
+
         {button.bitmap && button.bitmap.some(b => b !== 0) ? (
           <BitmapCanvas bitmap={button.bitmap} width={128} height={64} className="w-full h-full object-contain p-2" />
         ) : (

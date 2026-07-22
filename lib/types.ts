@@ -1,4 +1,4 @@
-export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'none';
+export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'folder' | 'back' | 'none';
 
 export type ConsumerAction =
   | 'VOLUME_INCREMENT'
@@ -38,6 +38,11 @@ export interface CppAction {
   code: string;
 }
 
+export interface FolderAction {
+  targetPageId?: string;
+  targetPageIndex?: number;
+}
+
 export interface SequenceStep {
   type: 'keyboard' | 'text' | 'consumer' | 'mouse' | 'delay';
   keyboard?: KeyboardAction;
@@ -55,6 +60,7 @@ export interface ButtonAction {
   mouse?: MouseAction;
   cpp?: CppAction;
   sequence?: SequenceStep[];
+  folder?: FolderAction;
 }
 
 export interface ButtonState {
@@ -110,6 +116,8 @@ export interface PinConfig {
 export interface PageConfig {
   id: string;
   name: string;
+  parentId?: string;
+  isFolder?: boolean;
   buttons: ButtonState[]; // exactly 6 buttons per page
 }
 

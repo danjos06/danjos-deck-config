@@ -10,9 +10,11 @@ O **Danjos Deck** é uma plataforma completa e intuitiva desenvolvida em Next.js
 
 ### 🎨 Editor Visual e Design de Botões
 - **Grade Estilo Stream Deck:** Visualização e edição em tempo real para decks de botões com telas OLED.
-- **Gerenciador de Páginas:**
-  - Suporte a múltiplas páginas independentes de macros.
-  - Funcionalidades para **adicionar, renomear, duplicar, reordenar e excluir** páginas.
+- **Gerenciador de Páginas e Navegação por Pastas:**
+  - Suporte a múltiplas páginas e sub-pastas hierárquicas de macros.
+  - **Navegação por Pastas (Folders):** Atribua a qualquer botão uma ação de Pasta para abrir sub-páginas específicas no deck.
+  - **Ação de Voltar (Back):** Botão configurável de retorno para voltar para a página inicial ou pasta pai.
+  - Funcionalidades para **adicionar, criar sub-pastas, renomear, duplicar, reordenar e excluir** páginas/pastas.
 - **Personalização Estética Completa por Botão:**
   - **Biblioteca de Ícones Integrada:** Busca e seleção de ícones do *Google Material Symbols*.
   - **Layouts Ajustáveis:** Apenas Ícone, Ícone + Texto ao Lado, ou Ícone + Texto Abaixo.
