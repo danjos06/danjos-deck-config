@@ -1,4 +1,4 @@
-export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'go_to_page' | 'none';
+export type ActionType = 'keyboard' | 'text' | 'consumer' | 'mouse' | 'cpp' | 'sequence' | 'none';
 
 export type ConsumerAction =
   | 'VOLUME_INCREMENT'
@@ -55,7 +55,6 @@ export interface ButtonAction {
   mouse?: MouseAction;
   cpp?: CppAction;
   sequence?: SequenceStep[];
-  targetPageId?: string;
 }
 
 export interface ButtonState {
@@ -114,17 +113,8 @@ export interface PageConfig {
   buttons: ButtonState[]; // exactly 6 buttons per page
 }
 
-export interface FolderConfig {
-  id: string;
-  name: string;
-  pageIds: string[]; // references to PageConfig IDs
-  showNameAt: 'left' | 'center' | 'right' | 'none';
-  backButtonPos: 'header' | 'btn-1' | 'btn-6' | 'manual';
-}
-
 export interface DanjosDeckConfig {
   pages: PageConfig[];
-  folders?: FolderConfig[];
   encoder1: EncoderConfig;
   encoder2: EncoderConfig;
   pins: PinConfig;

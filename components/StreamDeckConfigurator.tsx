@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DanjosDeckConfig, PageConfig, ButtonState, FolderConfig } from '../lib/types';
+import { DanjosDeckConfig, PageConfig, ButtonState } from '../lib/types';
 import { loadConfig, saveConfig } from '../lib/storage';
 import { generateDefaultBitmap, generateIconBitmap } from '../lib/imageConverter';
 import ButtonGrid from './ButtonGrid';
@@ -26,7 +26,6 @@ const DEFAULT_PINS = {
 
 const DEFAULT_CONFIG: DanjosDeckConfig = {
   pages: [],
-  folders: [],
   encoder1: {
     cwAction: { type: 'consumer', consumer: 'VOLUME_INCREMENT' },
     ccwAction: { type: 'consumer', consumer: 'VOLUME_DECREMENT' },
@@ -162,9 +161,6 @@ export default function StreamDeckConfigurator() {
           loaded.encoder1 = (loaded as any).encoder || DEFAULT_CONFIG.encoder1;
           loaded.encoder2 = DEFAULT_CONFIG.encoder2;
           loaded.pins = DEFAULT_CONFIG.pins;
-        }
-        if (!loaded.folders) {
-          loaded.folders = [];
         }
         setConfig(loaded);
       } else {
@@ -387,32 +383,7 @@ export default function StreamDeckConfigurator() {
                     </div>
                   </div>
 
-                  {/* Device Screen Frame with Page Title */}
-                  <div className="flex flex-col bg-[#111] p-4 rounded-3xl border-4 border-[#2d2d2d] shadow-2xl relative min-w-[340px]">
-                    <div className="w-full text-xs font-bold font-mono py-1 px-1 mb-3 flex items-center justify-between border-b border-[#2d2d2d] text-blue-400 select-none">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="material-symbols-rounded text-sm">auto_awesome_motion</span>
-                        <span className="truncate max-w-[180px]">{config.pages[selectedPageIdx]?.name || `${t.page} ${selectedPageIdx + 1}`}</span>
-                      </div>
-                      <span className="text-[10px] bg-[#222] px-1.5 py-0.5 rounded border border-[#2d2d2d]">{selectedPageIdx + 1}</span>
-                    </div>
-
-                    <ButtonGrid 
-                      page={config.pages[selectedPageIdx]} 
-                      onUpdatePage={handleUpdatePage} 
-                      selectedButtonIdx={selectedButtonIdx} 
-                      onSelectButton={setSelectedButtonIdx} 
-                      t={t} 
-                      pages={config.pages}
-                      onJumpToPage={(pageId) => {
-                        const targetIdx = config.pages.findIndex(p => p.id === pageId);
-                        if (targetIdx !== -1) {
-                          setSelectedPageIdx(targetIdx);
-                          setSelectedButtonIdx(undefined);
-                        }
-                      }}
-                    />
-                  </div>
+                  <ButtonGrid page={config.pages[selectedPageIdx]} onUpdatePage={handleUpdatePage} selectedButtonIdx={selectedButtonIdx} onSelectButton={setSelectedButtonIdx} t={t} />
 
                   <div className="flex flex-col items-center space-y-4">
                     <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{t.encoderR}</p>
@@ -426,59 +397,33 @@ export default function StreamDeckConfigurator() {
                   </div>
                 </div>
 
-                {/* Folders Navigation Bar */}
-                {/* Pages Navigation Bar */}
-                <div className="flex items-center justify-between w-full max-w-2xl px-8 mt-6 mb-4" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    onClick={() => {
-                      const prevIdx = (selectedPageIdx - 1 + config.pages.length) % config.pages.length;
-                      setSelectedPageIdx(prevIdx);
-                    }} 
-                    className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"
-                  >
-                    <ChevronLeft size={28} />
-                  </button>
-                  
+                <div className="flex items-center justify-between w-full max-w-2xl mt-8 px-8 mb-4" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => setSelectedPageIdx((selectedPageIdx - 1 + config.pages.length) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronLeft size={28} /></button>
                   <div className="flex items-center space-x-3 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner">
-                    {config.pages.map((p, idx) => {
-                      return (
-                        <button 
-                          key={p.id} 
-                          onClick={() => setSelectedPageIdx(idx)} 
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: idx });
-                          }}
-                          className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${selectedPageIdx === idx ? 'bg-blue-600 text-white shadow-lg scale-110' : 'text-gray-500 hover:text-gray-300'}`}
-                        >
-                          {idx + 1}
-                        </button>
-                      );
-                    })}
+                    {config.pages.map((p, i) => (
+                      <button 
+                        key={p.id} 
+                        onClick={() => setSelectedPageIdx(i)} 
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: i });
+                        }}
+                        className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${selectedPageIdx === i ? 'bg-blue-600 text-white shadow-lg scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
                     <button onClick={() => {
-                      if (config.pages.length < 12) { // Allow up to 12 pages
+                      if (config.pages.length < 8) {
                         const newC = { ...config };
                         const bm = generateDefaultBitmap();
-                        const newPageId = `p${Date.now()}`;
-                        const newPageName = `${t.page} ${config.pages.length + 1}`;
-                        const newPage: PageConfig = { id: newPageId, name: newPageName, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) };
-                        
-                        newC.pages.push(newPage);
+                        newC.pages.push({ id: `p${Date.now()}`, name: `${t.page} ${config.pages.length + 1}`, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) });
                         handleUpdateConfig(newC);
                         setSelectedPageIdx(newC.pages.length - 1);
                       }
                     }} className="w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-[#3d3d3d] flex items-center justify-center"><Plus size={18} /></button>
                   </div>
-
-                  <button 
-                    onClick={() => {
-                      const nextIdx = (selectedPageIdx + 1) % config.pages.length;
-                      setSelectedPageIdx(nextIdx);
-                    }} 
-                    className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"
-                  >
-                    <ChevronRight size={28} />
-                  </button>
+                  <button onClick={() => setSelectedPageIdx((selectedPageIdx + 1) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronRight size={28} /></button>
                 </div>
               </div>
 
@@ -751,28 +696,6 @@ export default function StreamDeckConfigurator() {
                             <div className="text-[10px] font-mono text-blue-400 truncate bg-blue-900/10 border border-blue-900/20 px-2 py-1 rounded italic mb-1.5">
                               {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}
                             </div>
-                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type === 'go_to_page' && (() => {
-                              const targetPageId = config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.targetPageId;
-                              const destPage = config.pages.find(p => p.id === targetPageId);
-                              if (destPage) {
-                                return (
-                                  <button
-                                    onClick={() => {
-                                      const destIdx = config.pages.findIndex(p => p.id === targetPageId);
-                                      if (destIdx !== -1) {
-                                        setSelectedPageIdx(destIdx);
-                                        setSelectedButtonIdx(undefined);
-                                      }
-                                    }}
-                                    className="w-full py-1.5 mb-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center space-x-1 shadow"
-                                  >
-                                    <span className="material-symbols-rounded text-xs">shortcut</span>
-                                    <span>{lang === 'pt' ? `Ir para "${destPage.name}"` : `Go to "${destPage.name}"`}</span>
-                                  </button>
-                                );
-                              }
-                              return null;
-                            })()}
                             <button 
                               onClick={() => openButtonActionModal(selectedButtonIdx)} 
                               className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-all"
@@ -787,30 +710,8 @@ export default function StreamDeckConfigurator() {
                       <div className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full py-6 space-y-4">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">{t.currentAction}</label>
-                          <div className="w-full h-11 bg-[#111] border border-[#2d2d2d] text-xs text-blue-400 font-mono px-4 flex items-center justify-between rounded italic">
-                            <span>{config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}</span>
-                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type === 'go_to_page' && (() => {
-                              const targetPageId = config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.targetPageId;
-                              const destPage = config.pages.find(p => p.id === targetPageId);
-                              if (destPage) {
-                                return (
-                                  <button
-                                    onClick={() => {
-                                      const destIdx = config.pages.findIndex(p => p.id === targetPageId);
-                                      if (destIdx !== -1) {
-                                        setSelectedPageIdx(destIdx);
-                                        setSelectedButtonIdx(undefined);
-                                      }
-                                    }}
-                                    className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center space-x-1"
-                                  >
-                                    <span className="material-symbols-rounded text-[11px]">shortcut</span>
-                                    <span>{lang === 'pt' ? 'Ir' : 'Go'}</span>
-                                  </button>
-                                );
-                              }
-                              return null;
-                            })()}
+                          <div className="w-full h-11 bg-[#111] border border-[#2d2d2d] text-xs text-blue-400 font-mono px-4 flex items-center rounded italic">
+                            {config.pages[selectedPageIdx]?.buttons[selectedButtonIdx]?.action?.type || t.noAction}
                           </div>
                         </div>
 
@@ -868,7 +769,7 @@ export default function StreamDeckConfigurator() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setPageContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setPageContextMenu(null); }} />
           <div 
-            className="fixed z-50 bg-[#2d2d2d] border border-[#3d3d3d] rounded-lg shadow-2xl py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 bg-[#2d2d2d] border border-[#3d3d3d] rounded-lg shadow-2xl py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
             style={{ top: pageContextMenu.y, left: pageContextMenu.x }}
           >
             <button 

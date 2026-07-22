@@ -107,8 +107,6 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
       newAction.cpp = { code: 'Keyboard.print("Hello World!");' };
     } else if (type === 'sequence') {
       newAction.sequence = [];
-    } else if (type === 'go_to_page') {
-      newAction.targetPageId = config.pages && config.pages.length > 0 ? config.pages[0].id : '';
     }
     setAction(newAction);
   };
@@ -132,7 +130,7 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-300">{t.actionType}</label>
             <div className="grid grid-cols-2 gap-2">
-              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence', 'go_to_page'].map((type) => (
+              {['none', 'keyboard', 'text', 'consumer', 'mouse', 'cpp', 'sequence'].map((type) => (
                 <button
                   key={type}
                   onClick={() => updateActionType(type as ActionType)}
@@ -310,32 +308,6 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
             >
               {consumerActions.map(ca => <option key={ca.value} value={ca.value}>{ca.icon} {ca.label}</option>)}
             </select>
-          )}
-
-          {action.type === 'go_to_page' && (
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-300">{t.selectPageToOpen}</label>
-              {config.pages && config.pages.length > 0 ? (
-                <select
-                  value={action.targetPageId || ''}
-                  onChange={(e) => setAction({ ...action, targetPageId: e.target.value })}
-                  className="w-full bg-[#252525] border border-[#3d3d3d] text-xs text-white p-2 rounded"
-                >
-                  <option value="" disabled>{lang === 'pt' ? 'Selecione uma página...' : 'Select a page...'}</option>
-                  {config.pages.map((p, idx) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name || `${t.page} ${idx + 1}`}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="text-xs text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded">
-                  {lang === 'pt' 
-                    ? 'Nenhuma página criada ainda.' 
-                    : 'No pages created yet.'}
-                </div>
-              )}
-            </div>
           )}
 
         </div>

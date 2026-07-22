@@ -10,19 +10,9 @@ interface ButtonGridProps {
   selectedButtonIdx?: number;
   onSelectButton?: (index: number) => void;
   t: any;
-  pages?: PageConfig[];
-  onJumpToPage?: (pageId: string) => void;
 }
 
-export default function ButtonGrid({ 
-  page, 
-  onUpdatePage, 
-  selectedButtonIdx, 
-  onSelectButton, 
-  t, 
-  pages,
-  onJumpToPage
-}: ButtonGridProps) {
+export default function ButtonGrid({ page, onUpdatePage, selectedButtonIdx, onSelectButton, t }: ButtonGridProps) {
   const handleUpdateBtn = (index: number, newBtnState: ButtonState) => {
     const newButtons = [...page.buttons];
     newButtons[index] = newBtnState;
@@ -32,21 +22,17 @@ export default function ButtonGrid({
   return (
     <div className="flex items-center justify-center">
       <div className="grid grid-cols-3 gap-4">
-        {page.buttons.map((btn, idx) => {
-          return (
-            <ButtonCard
-              key={`${page.id}-btn-${idx}`}
-              button={btn}
-              index={idx}
-              onUpdate={handleUpdateBtn}
-              isSelected={selectedButtonIdx === idx}
-              onSelect={() => onSelectButton?.(idx)}
-              t={t}
-              pages={pages}
-              onJumpToPage={onJumpToPage}
-            />
-          );
-        })}
+        {page.buttons.map((btn, idx) => (
+          <ButtonCard
+            key={`${page.id}-btn-${idx}`}
+            button={btn}
+            index={idx}
+            onUpdate={handleUpdateBtn}
+            isSelected={selectedButtonIdx === idx}
+            onSelect={() => onSelectButton?.(idx)}
+            t={t}
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { DanjosDeckConfig, ButtonAction } from './types';
 import { getKeyCode, getKeyName } from './keyMap';
-import { generateIconBitmap } from './imageConverter';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -72,12 +71,6 @@ export async function syncConfigViaWiFi(
         key = 5;
         v1 = action.mouse.amount || 0;
       }
-    } else if (action.type === 'go_to_page' && action.targetPageId) {
-      const destPageIdx = config.pages.findIndex(p => p.id === action.targetPageId);
-      if (destPageIdx !== -1) {
-        type = 5; // Page Navigation / Jump
-        key = destPageIdx;
-      }
     } else if (action.type === 'sequence' && action.sequence) {
       type = 4;
       for (let i = 0; i < action.sequence.length; i++) {
@@ -142,7 +135,6 @@ export async function syncConfigViaWiFi(
 
   for (let p = 0; p < config.pages.length; p++) {
     const page = config.pages[p];
-
     for (let b = 0; b < 6; b++) {
       const btn = page.buttons[b];
       if (!btn) continue;
@@ -153,12 +145,10 @@ export async function syncConfigViaWiFi(
       }
 
       // Send bitmap
-      let bitmap = btn.bitmap;
-
-      if (bitmap && bitmap.length === 1024) {
+      if (btn.bitmap && btn.bitmap.length === 1024) {
         onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);
         
-        const bytes = new Uint8Array(bitmap);
+        const bytes = new Uint8Array(btn.bitmap);
         await uploadFile(`b_${b}_${p}.bin`, bytes);
       }
       processedButtons++;
@@ -258,12 +248,6 @@ export async function syncConfigToDevice(
           key = 5;
           v1 = action.mouse.amount || 0;
         }
-      } else if (action.type === 'go_to_page' && action.targetPageId) {
-        const destPageIdx = config.pages.findIndex(p => p.id === action.targetPageId);
-        if (destPageIdx !== -1) {
-          type = 5; // Page Navigation / Jump
-          key = destPageIdx;
-        }
       } else if (action.type === 'sequence' && action.sequence) {
         type = 4;
         for (let i = 0; i < action.sequence.length; i++) {
@@ -322,7 +306,6 @@ export async function syncConfigToDevice(
 
     for (let p = 0; p < config.pages.length; p++) {
       const page = config.pages[p];
-
       for (let b = 0; b < 6; b++) {
         const btn = page.buttons[b];
         if (!btn) continue;
@@ -333,12 +316,10 @@ export async function syncConfigToDevice(
         }
 
         // Send bitmap
-        let bitmap = btn.bitmap;
-
-        if (bitmap && bitmap.length === 1024) {
+        if (btn.bitmap && btn.bitmap.length === 1024) {
           onProgress(`Sending image for Page ${p + 1}, Button ${b + 1}...`, 10 + (processedButtons / totalButtons) * 80);
           
-          const bytes = new Uint8Array(bitmap);
+          const bytes = new Uint8Array(btn.bitmap);
 
           await writeText(`BITMAP ${b} ${p}`);
           await waitForResponse('READY', 2000);
