@@ -183,6 +183,7 @@ struct Step {
 Action actions[12][8]; // 6 buttons + 2 encoders(3 each) = 12 total, max 8 pages
 Step macros[12][8][10]; // Max 10 steps per macro
 uint8_t macroLen[12][8];
+bool isFolderPage[16] = {false};
 
 bool lastBtnState[6] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 bool lastPrevState = HIGH;
@@ -236,6 +237,7 @@ void loadConfig() {
   totalPages = 1;
   memset(actions, 0, sizeof(actions));
   memset(macroLen, 0, sizeof(macroLen));
+  memset(isFolderPage, 0, sizeof(isFolderPage));
   pc_ip = "${config.pcIp || ''}";
 
   File f = LittleFS.open("/config.txt", "r");
@@ -245,6 +247,11 @@ void loadConfig() {
     line.trim();
     if (line.startsWith("PAGES ")) {
       totalPages = line.substring(6).toInt();
+    } else if (line.startsWith("FOLDER ")) {
+      int p, isF;
+      if (sscanf(line.c_str(), "FOLDER %d %d", &p, &isF) == 2) {
+        if (p < 16) isFolderPage[p] = (isF == 1);
+      }
     } else if (line.startsWith("PCIP ")) {
       pc_ip = line.substring(5);
       pc_ip.trim();
@@ -364,7 +371,7 @@ void processCommand(String cmd) {
     loadConfig();
     updateDisplays();
     Serial.println("OK");
-  } else if (cmd.startsWith("ACT ") || cmd.startsWith("SEQ ") || cmd.startsWith("PAGES ") || cmd.startsWith("PCIP ")) {
+  } else if (cmd.startsWith("ACT ") || cmd.startsWith("SEQ ") || cmd.startsWith("PAGES ") || cmd.startsWith("PCIP ") || cmd.startsWith("FOLDER ")) {
     File f = LittleFS.open("/config.txt", "a");
     f.println(cmd);
     f.close();
@@ -515,7 +522,14 @@ void loop() {
   if (PIN_PREV != -1) {
     bool prevState = digitalRead(PIN_PREV);
     if (prevState == LOW && lastPrevState == HIGH) {
-      if (totalPages > 0) { currentPage = (currentPage - 1 + totalPages) % totalPages; updateDisplays(); }
+      if (totalPages > 0) {
+        int nextP = currentPage;
+        do {
+          nextP = (nextP - 1 + totalPages) % totalPages;
+        } while (isFolderPage[nextP] && nextP != currentPage);
+        currentPage = nextP;
+        updateDisplays();
+      }
       delay(200);
     }
     lastPrevState = prevState;
@@ -524,7 +538,14 @@ void loop() {
   if (PIN_NEXT != -1) {
     bool nextState = digitalRead(PIN_NEXT);
     if (nextState == LOW && lastNextState == HIGH) {
-      if (totalPages > 0) { currentPage = (currentPage + 1) % totalPages; updateDisplays(); }
+      if (totalPages > 0) {
+        int nextP = currentPage;
+        do {
+          nextP = (nextP + 1) % totalPages;
+        } while (isFolderPage[nextP] && nextP != currentPage);
+        currentPage = nextP;
+        updateDisplays();
+      }
       delay(200);
     }
     lastNextState = nextState;

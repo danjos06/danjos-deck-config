@@ -69,9 +69,90 @@ const POPULAR_ICONS = [
 export default function StreamDeckConfigurator() {
   const [config, setConfig] = useState<DanjosDeckConfig | null>(null);
   const [selectedPageIdx, setSelectedPageIdx] = useState(0);
+  const [navTab, setNavTab] = useState<'main' | 'folders'>('main');
   const [selectedButtonIdx, setSelectedButtonIdx] = useState<number | undefined>(undefined);
   const [lang, setLang] = useState<Language>('en');
   const [activeTab, setActiveTab] = useState<'config' | 'sync' | 'pins' | 'docs'>('config');
+
+  const mainPages = config ? config.pages.filter(p => !p.isFolder) : [];
+  const subFolders = config ? config.pages.filter(p => p.isFolder) : [];
+  const currentPage = config?.pages[selectedPageIdx];
+
+  const handlePrevMainPage = () => {
+    if (!config || mainPages.length === 0) return;
+    const currentMainIdx = mainPages.findIndex(p => p.id === currentPage?.id);
+    const prevIdx = currentMainIdx <= 0 ? mainPages.length - 1 : currentMainIdx - 1;
+    const globalIdx = config.pages.findIndex(p => p.id === mainPages[prevIdx].id);
+    if (globalIdx !== -1) setSelectedPageIdx(globalIdx);
+  };
+
+  const handleNextMainPage = () => {
+    if (!config || mainPages.length === 0) return;
+    const currentMainIdx = mainPages.findIndex(p => p.id === currentPage?.id);
+    const nextIdx = (currentMainIdx + 1) % mainPages.length;
+    const globalIdx = config.pages.findIndex(p => p.id === mainPages[nextIdx].id);
+    if (globalIdx !== -1) setSelectedPageIdx(globalIdx);
+  };
+
+  const handleAddMainPage = () => {
+    if (!config || config.pages.length >= 16) return;
+    const newC = { ...config };
+    const bm = generateDefaultBitmap();
+    const pageNum = mainPages.length + 1;
+    const newPageId = `p-${Date.now()}`;
+    newC.pages.push({
+      id: newPageId,
+      name: `${t.page} ${pageNum}`,
+      isFolder: false,
+      buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } }))
+    });
+    handleUpdateConfig(newC);
+    const newIdx = newC.pages.findIndex(p => p.id === newPageId);
+    if (newIdx !== -1) setSelectedPageIdx(newIdx);
+    setNavTab('main');
+    showToast(`${t.page} ${pageNum} ${lang === 'pt' ? 'criada!' : 'created!'}`);
+  };
+
+  const handleAddFolder = () => {
+    if (!config || config.pages.length >= 16) return;
+    const newC = { ...config };
+    const folderNum = subFolders.length + 1;
+    const newPageId = `folder-${Date.now()}`;
+    const newPageName = `${t.folder} ${folderNum}`;
+    const bm = generateDefaultBitmap();
+
+    const defaultButtons: ButtonState[] = Array(6).fill(null).map((_, idx) => {
+      if (idx === 0) {
+        return {
+          label: t.back,
+          iconName: 'arrow_back',
+          iconLayout: 'icon-text-below',
+          showBorder: true,
+          bitmap: bm,
+          action: { type: 'back', folder: { targetPageId: currentPage?.id || 'root' } }
+        };
+      }
+      return {
+        label: '',
+        bitmap: bm,
+        action: { type: 'none' }
+      };
+    });
+
+    newC.pages.push({
+      id: newPageId,
+      name: newPageName,
+      parentId: currentPage?.id,
+      isFolder: true,
+      buttons: defaultButtons
+    });
+
+    handleUpdateConfig(newC);
+    const newIdx = newC.pages.findIndex(p => p.id === newPageId);
+    if (newIdx !== -1) setSelectedPageIdx(newIdx);
+    setNavTab('folders');
+    showToast(`${t.folder} "${newPageName}" ${lang === 'pt' ? 'criada!' : 'created!'}`);
+  };
   
   // Sub-tabs for selected button config
   const [buttonSubTab, setButtonSubTab] = useState<'appearance' | 'action'>('appearance');
@@ -316,24 +397,26 @@ export default function StreamDeckConfigurator() {
 
   return (
     <div className="flex flex-col h-screen bg-[#1e1e1e] text-white overflow-hidden font-sans">
-      <header className="h-24 bg-[#1a1a1a] flex items-center justify-between px-6 flex-shrink-0 z-10 border-b border-[#2d2d2d]">
-        <div className="flex items-center">
-          <div className="w-24 h-24 relative">
+      <header className="min-h-16 md:h-20 bg-[#161616] flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-3 flex-shrink-0 z-10 border-b border-[#2a2a2a] gap-3">
+        <div className="flex items-center space-x-3">
+          <div className="w-20 h-10 relative">
             <Image src="https://i.imgur.com/700dwV5.png" alt="Logo" fill className="object-contain" unoptimized referrerPolicy="no-referrer" />
           </div>
+          <span className="text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-full hidden sm:inline-block">v2.5 Firmware</span>
         </div>
-        <div className="flex items-center space-x-6">
-          <div className="flex bg-[#252525] rounded-lg p-1 border border-[#3d3d3d]">
-            <button onClick={() => setActiveTab('config')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'config' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex bg-[#222] rounded-xl p-1 border border-[#333] shadow-inner">
+            <button onClick={() => setActiveTab('config')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${activeTab === 'config' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>
               <Layout size={14} /><span>{t.editor}</span>
             </button>
-            <button onClick={() => setActiveTab('sync')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'sync' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+            <button onClick={() => setActiveTab('sync')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${activeTab === 'sync' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>
               <Cpu size={14} /><span>{t.sync}</span>
             </button>
-            <button onClick={() => setActiveTab('pins')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'pins' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+            <button onClick={() => setActiveTab('pins')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${activeTab === 'pins' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>
               <Settings size={14} /><span>{t.pinsSettings}</span>
             </button>
-            <button onClick={() => setActiveTab('docs')} className={`px-4 py-2 rounded-md text-xs font-medium transition-all flex items-center space-x-2 ${activeTab === 'docs' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+            <button onClick={() => setActiveTab('docs')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${activeTab === 'docs' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>
               <BookOpen size={14} /><span>{t.instructions}</span>
             </button>
           </div>
@@ -342,26 +425,26 @@ export default function StreamDeckConfigurator() {
           <button 
             onClick={handleQuickSync}
             disabled={isQuickSyncing || (!isConnected && !ipAddress)}
-            className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-bold transition-all shadow-lg text-sm
+            className={`flex items-center space-x-2 px-4 py-1.5 rounded-xl font-bold transition-all shadow-md text-xs
               ${isQuickSyncing ? 'bg-orange-600 text-white animate-pulse' : 
-                (isConnected || ipAddress) ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                (isConnected || ipAddress) ? 'bg-emerald-600 hover:bg-emerald-500 text-white hover:scale-105 active:scale-95' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
           >
             {isQuickSyncing ? (
-              <RefreshCw size={16} className="animate-spin" />
+              <RefreshCw size={14} className="animate-spin" />
             ) : (
-              <Send size={16} />
+              <Send size={14} />
             )}
             <span>{isQuickSyncing ? (lang === 'pt' ? 'Enviando...' : 'Sending...') : (lang === 'pt' ? 'Enviar' : 'Send')}</span>
             {(!isQuickSyncing && (isConnected || ipAddress)) && (
-              <span className="ml-2 text-[10px] opacity-70">
-                ({isConnected ? 'USB' : ipAddress})
+              <span className="ml-1 text-[10px] opacity-80 bg-black/30 px-1.5 py-0.5 rounded">
+                {isConnected ? 'USB' : 'WiFi'}
               </span>
             )}
           </button>
 
-          <div className="flex items-center space-x-3">
-            <button onClick={() => handleLangChange('en')} className={`text-2xl transition-all ${lang === 'en' ? 'scale-110 opacity-100' : 'grayscale opacity-50'}`}>🇺🇸</button>
-            <button onClick={() => handleLangChange('pt')} className={`text-2xl transition-all ${lang === 'pt' ? 'scale-110 opacity-100' : 'grayscale opacity-50'}`}>🇧🇷</button>
+          <div className="flex items-center space-x-2 bg-[#222] border border-[#333] rounded-xl px-2 py-1">
+            <button onClick={() => handleLangChange('en')} className={`text-lg transition-all ${lang === 'en' ? 'scale-110 opacity-100' : 'grayscale opacity-40 hover:opacity-80'}`} title="English">🇺🇸</button>
+            <button onClick={() => handleLangChange('pt')} className={`text-lg transition-all ${lang === 'pt' ? 'scale-110 opacity-100' : 'grayscale opacity-40 hover:opacity-80'}`} title="Português">🇧🇷</button>
           </div>
         </div>
       </header>
@@ -370,62 +453,202 @@ export default function StreamDeckConfigurator() {
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]" onClick={() => setSelectedButtonIdx(undefined)}>
           {activeTab === 'config' ? (
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto">
-                <div className="flex items-center justify-center space-x-12 my-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-col items-center space-y-4">
+              <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 relative overflow-y-auto">
+                
+                {/* Sub-Folder Banner Banner when editing a folder */}
+                {currentPage?.isFolder && (
+                  <div className="w-full max-w-2xl mb-4 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-500/40 rounded-xl p-3 flex items-center justify-between shadow-xl animate-in fade-in">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="p-2 bg-blue-600/30 rounded-lg text-blue-400">
+                        <Folder size={18} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">{t.editingFolder}</div>
+                        <div className="text-sm font-bold text-white">{currentPage.name}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const parentIdx = currentPage.parentId ? config.pages.findIndex(p => p.id === currentPage.parentId) : -1;
+                        const firstMainIdx = config.pages.findIndex(p => !p.isFolder);
+                        setSelectedPageIdx(parentIdx !== -1 ? parentIdx : (firstMainIdx !== -1 ? firstMainIdx : 0));
+                        setNavTab('main');
+                      }}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shadow hover:scale-105 active:scale-95"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>{t.backToMainPages}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Deck Frame & Encoders */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 my-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col items-center space-y-3">
                     <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{t.encoderL}</p>
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#3d3d3d] to-[#111] border-2 border-[#4d4d4d] shadow-2xl flex items-center justify-center cursor-pointer hover:border-blue-500 transition-all active:scale-95" onClick={() => openEncoderActionModal('btn1')}>
                       <div className="w-14 h-14 rounded-full bg-[#1a1a1a] border border-[#222] shadow-inner flex items-center justify-center"><div className="w-3 h-3 rounded-full bg-gray-700 shadow-md"></div></div>
                     </div>
                     <div className="flex space-x-4">
-                      <button onClick={() => openEncoderActionModal('ccw1')} className="text-xl text-gray-500 hover:text-white transition-colors">↺</button>
-                      <button onClick={() => openEncoderActionModal('cw1')} className="text-xl text-gray-500 hover:text-white transition-colors">↻</button>
+                      <button onClick={() => openEncoderActionModal('ccw1')} className="text-xl text-gray-500 hover:text-white transition-colors" title="Girar Anti-horário">↺</button>
+                      <button onClick={() => openEncoderActionModal('cw1')} className="text-xl text-gray-500 hover:text-white transition-colors" title="Girar Horário">↻</button>
                     </div>
                   </div>
 
                   <ButtonGrid page={config.pages[selectedPageIdx]} onUpdatePage={handleUpdatePage} selectedButtonIdx={selectedButtonIdx} onSelectButton={setSelectedButtonIdx} t={t} />
 
-                  <div className="flex flex-col items-center space-y-4">
+                  <div className="flex flex-col items-center space-y-3">
                     <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{t.encoderR}</p>
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#3d3d3d] to-[#111] border-2 border-[#4d4d4d] shadow-2xl flex items-center justify-center cursor-pointer hover:border-blue-500 transition-all active:scale-95" onClick={() => openEncoderActionModal('btn2')}>
                       <div className="w-14 h-14 rounded-full bg-[#1a1a1a] border border-[#222] shadow-inner flex items-center justify-center"><div className="w-3 h-3 rounded-full bg-gray-700 shadow-md"></div></div>
                     </div>
                     <div className="flex space-x-4">
-                      <button onClick={() => openEncoderActionModal('ccw2')} className="text-xl text-gray-500 hover:text-white transition-colors">↺</button>
-                      <button onClick={() => openEncoderActionModal('cw2')} className="text-xl text-gray-500 hover:text-white transition-colors">↻</button>
+                      <button onClick={() => openEncoderActionModal('ccw2')} className="text-xl text-gray-500 hover:text-white transition-colors" title="Girar Anti-horário">↺</button>
+                      <button onClick={() => openEncoderActionModal('cw2')} className="text-xl text-gray-500 hover:text-white transition-colors" title="Girar Horário">↻</button>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between w-full max-w-2xl mt-8 px-8 mb-4" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setSelectedPageIdx((selectedPageIdx - 1 + config.pages.length) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronLeft size={28} /></button>
-                  <div className="flex items-center space-x-2 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner max-w-lg overflow-x-auto custom-scrollbar">
-                    {config.pages.map((p, i) => (
-                      <button 
-                        key={p.id} 
-                        onClick={() => setSelectedPageIdx(i)} 
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: i });
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 shrink-0 ${selectedPageIdx === i ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-gray-400 hover:text-gray-200 hover:bg-[#222]'}`}
-                        title={p.name}
-                      >
-                        {p.isFolder && <Folder size={12} className="text-blue-300 mr-0.5 shrink-0" />}
-                        <span className="truncate max-w-[90px]">{p.name || `${i + 1}`}</span>
-                      </button>
-                    ))}
-                    <button onClick={() => {
-                      if (config.pages.length < 12) {
-                        const newC = { ...config };
-                        const bm = generateDefaultBitmap();
-                        newC.pages.push({ id: `p${Date.now()}`, name: `${t.page} ${config.pages.length + 1}`, buttons: Array(6).fill(null).map(() => ({ label: '', bitmap: bm, action: { type: 'none' } })) });
-                        handleUpdateConfig(newC);
-                        setSelectedPageIdx(newC.pages.length - 1);
-                      }
-                    }} className="w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-[#3d3d3d] flex items-center justify-center shrink-0" title={t.addPage}><Plus size={18} /></button>
+                {/* Page Navigation Area (Separated Main Pages & Sub-Folders) */}
+                <div className="flex flex-col items-center w-full max-w-2xl mt-6 px-4 mb-2" onClick={(e) => e.stopPropagation()}>
+                  {/* Segmented Mode Switcher */}
+                  <div className="flex items-center space-x-2 bg-black/50 p-1.5 rounded-2xl border border-[#333] shadow-inner mb-4">
+                    <button
+                      onClick={() => {
+                        setNavTab('main');
+                        if (currentPage?.isFolder) {
+                          const firstMain = config.pages.findIndex(p => !p.isFolder);
+                          if (firstMain !== -1) setSelectedPageIdx(firstMain);
+                        }
+                      }}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all ${
+                        navTab === 'main' && !currentPage?.isFolder
+                          ? 'bg-blue-600 text-white shadow-lg scale-105'
+                          : 'text-gray-400 hover:text-white hover:bg-[#222]'
+                      }`}
+                    >
+                      <Layout size={14} />
+                      <span>{t.mainPages}</span>
+                      <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-black/40 border border-white/10">{mainPages.length}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setNavTab('folders');
+                        const firstFolder = config.pages.findIndex(p => p.isFolder);
+                        if (firstFolder !== -1) {
+                          setSelectedPageIdx(firstFolder);
+                        }
+                      }}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all ${
+                        navTab === 'folders' || currentPage?.isFolder
+                          ? 'bg-blue-600 text-white shadow-lg scale-105'
+                          : 'text-gray-400 hover:text-white hover:bg-[#222]'
+                      }`}
+                    >
+                      <Folder size={14} />
+                      <span>{t.subFolders}</span>
+                      <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-black/40 border border-white/10">{subFolders.length}</span>
+                    </button>
                   </div>
-                  <button onClick={() => setSelectedPageIdx((selectedPageIdx + 1) % config.pages.length)} className="p-4 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all"><ChevronRight size={28} /></button>
+
+                  {/* Page Pills Bar */}
+                  {navTab === 'main' && !currentPage?.isFolder ? (
+                    <div className="flex items-center justify-between w-full">
+                      <button 
+                        onClick={handlePrevMainPage} 
+                        className="p-3 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all shadow-md active:scale-95"
+                        title="Página Anterior (Main)"
+                      >
+                        <ChevronLeft size={22} />
+                      </button>
+
+                      <div className="flex items-center space-x-2 bg-black/40 rounded-full px-4 py-2 border border-[#3d3d3d] shadow-inner max-w-lg overflow-x-auto custom-scrollbar">
+                        {mainPages.map((p) => {
+                          const globalIdx = config.pages.findIndex(page => page.id === p.id);
+                          const isSelected = selectedPageIdx === globalIdx;
+                          return (
+                            <button 
+                              key={p.id} 
+                              onClick={() => setSelectedPageIdx(globalIdx)} 
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: globalIdx });
+                              }}
+                              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1 shrink-0 ${
+                                isSelected 
+                                  ? 'bg-blue-600 text-white shadow-lg scale-105 border border-blue-400/30' 
+                                  : 'text-gray-400 hover:text-gray-200 hover:bg-[#222]'
+                              }`}
+                              title={p.name}
+                            >
+                              <span className="truncate max-w-[100px]">{p.name}</span>
+                            </button>
+                          );
+                        })}
+
+                        <button 
+                          onClick={handleAddMainPage} 
+                          className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white flex items-center justify-center shrink-0 transition-all border border-blue-500/30" 
+                          title={t.addPage}
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+
+                      <button 
+                        onClick={handleNextMainPage} 
+                        className="p-3 rounded-full bg-[#252525] border border-[#3d3d3d] text-gray-400 hover:text-white hover:bg-[#333] transition-all shadow-md active:scale-95"
+                        title="Próxima Página (Main)"
+                      >
+                        <ChevronRight size={22} />
+                      </button>
+                    </div>
+                  ) : (
+                    /* Sub-Folders Carousel / View */
+                    <div className="flex items-center justify-center w-full">
+                      <div className="flex items-center space-x-2 bg-black/40 rounded-2xl px-4 py-2.5 border border-[#3d3d3d] shadow-inner max-w-lg overflow-x-auto custom-scrollbar">
+                        {subFolders.length === 0 ? (
+                          <div className="text-xs text-gray-400 px-3 py-1 flex items-center space-x-2">
+                            <span>{t.noFoldersYet}</span>
+                          </div>
+                        ) : (
+                          subFolders.map((p) => {
+                            const globalIdx = config.pages.findIndex(page => page.id === p.id);
+                            const isSelected = selectedPageIdx === globalIdx;
+                            return (
+                              <button 
+                                key={p.id} 
+                                onClick={() => setSelectedPageIdx(globalIdx)} 
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setPageContextMenu({ x: e.clientX, y: e.clientY, pageIdx: globalIdx });
+                                }}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+                                  isSelected 
+                                    ? 'bg-blue-600 text-white shadow-lg scale-105 border border-blue-400/30' 
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#222]'
+                                }`}
+                                title={p.name}
+                              >
+                                <Folder size={13} className="text-blue-300 shrink-0" />
+                                <span className="truncate max-w-[100px]">{p.name}</span>
+                              </button>
+                            );
+                          })
+                        )}
+
+                        <button 
+                          onClick={handleAddFolder} 
+                          className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white shrink-0 transition-all text-xs font-bold border border-blue-500/30" 
+                          title={t.createNewFolder}
+                        >
+                          <Plus size={16} />
+                          <span>{t.addFolder}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

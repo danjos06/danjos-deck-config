@@ -263,6 +263,29 @@ export default function ActionModal({ isOpen, onClose, config, pageIndex, button
                 <span className="text-sm font-medium">{t.back}</span>
               </div>
               <p className="text-xs text-gray-400">{t.backNavHint}</p>
+              
+              <div className="space-y-2">
+                <label className="text-xs text-gray-300">{t.backTarget}</label>
+                <select
+                  value={action.folder?.targetPageId || 'parent'}
+                  onChange={(e) => {
+                    const targetPageId = e.target.value;
+                    setAction({
+                      ...action,
+                      folder: { targetPageId }
+                    });
+                  }}
+                  className="w-full bg-[#252525] border border-[#3d3d3d] text-xs text-white p-2.5 rounded focus:outline-none focus:border-amber-500"
+                >
+                  <option value="parent">{t.backToParentFolder}</option>
+                  <option value="root">{t.backToRootPage}</option>
+                  {workingConfig.pages.filter(p => !p.isFolder).map((p, idx) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({t.page} {idx + 1})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 

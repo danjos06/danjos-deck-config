@@ -35,6 +35,11 @@ export async function syncConfigViaWiFi(
 
   onProgress('Setting pages...', 10);
   await sendCommand(`PAGES ${config.pages.length}`);
+  for (let p = 0; p < config.pages.length; p++) {
+    if (config.pages[p].isFolder) {
+      await sendCommand(`FOLDER ${p} 1`);
+    }
+  }
 
   // Helper to send actions
   const sendAction = async (btnIdx: number, pageIdx: number, action: ButtonAction) => {
@@ -78,7 +83,17 @@ export async function syncConfigViaWiFi(
       key = targetIdx !== -1 ? targetIdx : (action.folder?.targetPageIndex ?? 0);
     } else if (action.type === 'back') {
       type = 6;
-      key = 255;
+      const targetPageId = action.folder?.targetPageId;
+      if (targetPageId === 'root') {
+        key = 0;
+      } else if (targetPageId && targetPageId !== 'back' && targetPageId !== 'parent') {
+        const targetIdx = config.pages.findIndex(p => p.id === targetPageId);
+        key = targetIdx !== -1 ? targetIdx : 0;
+      } else {
+        const parentId = config.pages[pageIdx]?.parentId;
+        const parentIdx = parentId ? config.pages.findIndex(p => p.id === parentId) : -1;
+        key = parentIdx !== -1 ? parentIdx : 0;
+      }
     } else if (action.type === 'sequence' && action.sequence) {
       type = 4;
       for (let i = 0; i < action.sequence.length; i++) {
@@ -214,6 +229,13 @@ export async function syncConfigToDevice(
     await writeText(`PAGES ${config.pages.length}`);
     await waitForResponse('OK', 2000);
 
+    for (let p = 0; p < config.pages.length; p++) {
+      if (config.pages[p].isFolder) {
+        await writeText(`FOLDER ${p} 1`);
+        await waitForResponse('OK', 2000);
+      }
+    }
+
     // Send PC IP config
     onProgress('Sending PC IP configuration...', 12);
     if (config.pcIp !== undefined) {
@@ -263,7 +285,17 @@ export async function syncConfigToDevice(
         key = targetIdx !== -1 ? targetIdx : (action.folder?.targetPageIndex ?? 0);
       } else if (action.type === 'back') {
         type = 6;
-        key = 255;
+        const targetPageId = action.folder?.targetPageId;
+        if (targetPageId === 'root') {
+          key = 0;
+        } else if (targetPageId && targetPageId !== 'back' && targetPageId !== 'parent') {
+          const targetIdx = config.pages.findIndex(p => p.id === targetPageId);
+          key = targetIdx !== -1 ? targetIdx : 0;
+        } else {
+          const parentId = config.pages[pageIdx]?.parentId;
+          const parentIdx = parentId ? config.pages.findIndex(p => p.id === parentId) : -1;
+          key = parentIdx !== -1 ? parentIdx : 0;
+        }
       } else if (action.type === 'sequence' && action.sequence) {
         type = 4;
         for (let i = 0; i < action.sequence.length; i++) {

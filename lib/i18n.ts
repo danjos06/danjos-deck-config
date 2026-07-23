@@ -159,6 +159,16 @@ export const translations = {
     folderBadge: 'Folder',
     isSubFolder: 'Sub-folder',
     openFolderInEditor: 'Open Folder in Editor',
+    mainPages: 'Main Pages',
+    subFolders: 'Sub-Folders',
+    backToMainPages: 'Back to Main Pages',
+    editingFolder: 'Editing Folder',
+    editingPage: 'Editing Page',
+    backTarget: 'Back Action Destination',
+    backToParentFolder: 'Parent / Origin Page',
+    backToRootPage: 'Root Page (Main Page 1)',
+    noFoldersYet: 'No sub-folders created yet',
+    addFolder: 'New Folder',
   },
   pt: {
     title: 'Danjos Deck',
@@ -320,6 +330,16 @@ export const translations = {
     folderBadge: 'Pasta',
     isSubFolder: 'Sub-pasta',
     openFolderInEditor: 'Abrir Pasta no Editor',
+    mainPages: 'Páginas Principais',
+    subFolders: 'Sub-Pastas',
+    backToMainPages: 'Voltar p/ Páginas Principais',
+    editingFolder: 'Editando Pasta',
+    editingPage: 'Editando Página',
+    backTarget: 'Destino da Ação Voltar',
+    backToParentFolder: 'Página de Origem / Anterior (Pai)',
+    backToRootPage: 'Página Inicial (Página 1)',
+    noFoldersYet: 'Nenhuma sub-pasta criada ainda',
+    addFolder: 'Nova Pasta',
   }
 };
 
