@@ -1,6 +1,0 @@
-{
-  "name": "Danjos Deck",
-  "description": "Visual configurator for ESP32 macro decks.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
-}

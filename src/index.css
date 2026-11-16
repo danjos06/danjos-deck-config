@@ -1,0 +1,189 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/montserrat/800.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+/* Self-hosted Material Symbols Rounded (variable font, family "Material Symbols Rounded"). */
+@import 'material-symbols/rounded.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Brand: cyan/teal of the DANJOS DECK logo (sampled from the product photo). */
+  --accent: 31 182 214;
+  --accent-soft: 102 210 232;
+  --accent-deep: 18 140 168;
+  --brand-tile: 38 178 212;
+  --brand-tile-deep: 24 120 168;
+  --bg: #09090b;
+  --fg: #e7e9ec;
+  --track: #2a2c31;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--track) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--track);
+  border-radius: 8px;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+.material-symbols-rounded {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+
+.bg-studio {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgb(var(--accent) / 0.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgb(var(--brand-tile-deep) / 0.05), transparent 60%),
+    var(--bg);
+}
+
+.bg-noise {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+  background-size: 120px 120px;
+}
+
+/* Matte textured-PLA feel for panels: fine grain + a soft top sheen. */
+.surface-matte {
+  position: relative;
+  isolation: isolate;
+}
+.surface-matte::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 160px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: auto, 140px 140px;
+  opacity: 0.08;
+}
+
+/* Stage floor: dark backdrop with a faint cyan bounce, matching the 3D scene. */
+.bg-stage {
+  background:
+    radial-gradient(55% 42% at 50% 58%, rgb(var(--accent) / 0.07), transparent 70%),
+    radial-gradient(90% 55% at 50% 105%, rgba(255, 255, 255, 0.035), transparent 70%);
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* range input styling (Slider primitive) */
+input[type='range'].ui-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 20px;
+  width: 100%;
+  cursor: pointer;
+}
+input[type='range'].ui-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(to right, rgb(var(--accent)) var(--pct, 0%), var(--track) var(--pct, 0%));
+}
+input[type='range'].ui-range::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track);
+}
+input[type='range'].ui-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 4px;
+  background: rgb(var(--accent));
+}
+input[type='range'].ui-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  transition: transform 0.12s;
+}
+input[type='range'].ui-range::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: 0;
+}
+input[type='range'].ui-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+input[type='range'].ui-range:focus-visible {
+  outline: none;
+}
+input[type='range'].ui-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgb(var(--accent) / 0.55);
+}
+
+input[type='number']::-webkit-inner-spin-button {
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulseDot,
+  .animate-shimmer {
+    animation: none;
+  }
+}
+
+/* Enter-only fade used by panels that swap content (inspector body, sync transport panels). */
+@keyframes panel-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.panel-fade-in {
+  animation: panel-fade-in 0.16s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-fade-in {
+    animation: none;
+  }
+}
